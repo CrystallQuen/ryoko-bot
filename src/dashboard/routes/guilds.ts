@@ -4,6 +4,7 @@ import axios from 'axios';
 import { prisma } from '../../database';
 import { AuthRequest } from '../middleware/auth';
 import { logger } from '../../utils/logger';
+import { meCache, ME_TTL } from './auth';
 
 export function guildsRouter(client: Client): Router {
   const router = Router();
@@ -17,16 +18,28 @@ export function guildsRouter(client: Client): Router {
       });
       if (!session) return res.status(401).json({ error: 'Session invalide' });
 
-      const guildsRes = await axios.get('https://discord.com/api/v10/users/@me/guilds', {
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
-
-      const userGuilds = guildsRes.data as { id: string; name: string; icon: string | null; permissions: string }[];
+      // Réutilise le cache de /auth/me pour éviter un second appel Discord immédiat
+      let userGuilds: { id: string; name: string; icon: string | null; permissions: string }[];
+      const cached = meCache.get(session.id);
+      if (cached && Date.now() - cached.at < ME_TTL) {
+        userGuilds = cached.guilds;
+      } else {
+        const guildsRes = await axios.get('https://discord.com/api/v10/users/@me/guilds', {
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+        userGuilds = guildsRes.data;
+        // Met à jour le cache si une entrée existe déjà, sinon laisse /auth/me le gérer
+        if (cached) meCache.set(session.id, { ...cached, guilds: userGuilds, at: Date.now() });
+      }
 
       const managedGuilds = userGuilds.filter((g) => {
-        const perms = BigInt(g.permissions);
-        return (perms & BigInt(PermissionFlagsBits.Administrator)) !== BigInt(0) ||
-               (perms & BigInt(PermissionFlagsBits.ManageGuild)) !== BigInt(0);
+        try {
+          const perms = BigInt(g.permissions);
+          return (perms & BigInt(PermissionFlagsBits.Administrator)) !== BigInt(0) ||
+                 (perms & BigInt(PermissionFlagsBits.ManageGuild)) !== BigInt(0);
+        } catch {
+          return false;
+        }
       });
 
       const result = managedGuilds.map((g) => ({

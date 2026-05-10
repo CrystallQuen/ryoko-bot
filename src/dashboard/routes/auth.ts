@@ -8,10 +8,10 @@ export const authRouter = Router();
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
-// Cache mémoire pour /me — TTL 5 min par session
-interface CachedMe { user: unknown; guilds: unknown; at: number }
-const meCache = new Map<string, CachedMe>();
-const ME_TTL = 5 * 60 * 1000;
+// Cache mémoire pour /me — TTL 5 min par session (partagé avec guilds.ts)
+export interface CachedMe { user: unknown; guilds: { id: string; name: string; icon: string | null; permissions: string }[]; at: number }
+export const meCache = new Map<string, CachedMe>();
+export const ME_TTL = 5 * 60 * 1000;
 
 authRouter.get('/login', (_req: Request, res: Response) => {
   const params = new URLSearchParams({
