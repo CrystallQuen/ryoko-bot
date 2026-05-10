@@ -18,8 +18,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
     const session = await prisma.dashboardSession.findFirst({
       where: {
+        id: payload.sessionId,
         userId: payload.userId,
-        accessToken: token,
         expiresAt: { gte: new Date() },
       },
     });
