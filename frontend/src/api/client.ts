@@ -9,7 +9,10 @@ export const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Ne pas rediriger pour /auth/me : AuthContext gère ce cas (user = null → page login)
+    // Rediriger uniquement si la session expire pendant l'utilisation du dashboard
+    const url: string = error.config?.url ?? '';
+    if (error.response?.status === 401 && !url.includes('/auth/me')) {
       window.location.href = '/';
     }
     return Promise.reject(error);
