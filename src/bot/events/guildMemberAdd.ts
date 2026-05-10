@@ -3,14 +3,22 @@ import { BotEvent } from '../../types';
 import { prisma, getOrCreateGuild } from '../../database';
 import { logger } from '../../utils/logger';
 
+const MEMBRE_ROLE_ID = '1394696937713831997';
+
 const event: BotEvent = {
   name: 'guildMemberAdd',
   async execute(member: GuildMember) {
     try {
       const guildData = await getOrCreateGuild(member.guild.id, member.guild.name);
 
-      // Le panneau de bienvenue est envoyé dans guildMemberUpdate
-      // lorsque le rôle "Membre" est attribué.
+      // Attribution automatique du rôle Membre → déclenche guildMemberUpdate → carte de bienvenue
+      const membreRole = member.guild.roles.cache.get(MEMBRE_ROLE_ID);
+      if (membreRole) {
+        await member.roles.add(membreRole, 'Attribution automatique à l\'arrivée');
+        logger.info('Rôle Membre attribué', { guildId: member.guild.id, userId: member.id });
+      } else {
+        logger.warn('Rôle Membre introuvable', { guildId: member.guild.id, roleId: MEMBRE_ROLE_ID });
+      }
 
       // Enregistrement XP si niveau activé
       if (guildData.levelEnabled) {
@@ -20,8 +28,6 @@ const event: BotEvent = {
           create: { guildId: member.guild.id, userId: member.id },
         });
       }
-
-      logger.info('Nouveau membre enregistré', { guildId: member.guild.id, userId: member.id });
     } catch (error) {
       logger.error('Erreur événement guildMemberAdd', { error });
     }
