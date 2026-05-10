@@ -46,14 +46,18 @@ const event: BotEvent = {
 
       const memberCount = newMember.guild.memberCount;
 
+      const displayName = newMember.displayName || newMember.user.username;
+
       let message = guildData.welcomeMessage ?? `🌸 ようこそ！{user} sur le serveur **{guild}** ! ✨`;
       message = message
-        .replace(/{user}/g, `<@${newMember.id}>`)
+        // {user} et <@user> (littéral) → nom affiché avec @ pour la description
+        .replace(/{user}/g, `@${displayName}`)
+        .replace(/<@user>/g, `@${displayName}`)
         .replace(/{username}/g, newMember.user.username)
         .replace(/{guild}/g, newMember.guild.name)
         .replace(/{count}/g, memberCount.toString());
 
-      // Mention séparée dans content pour que Discord notifie réellement l'utilisateur
+      // Mention Discord dans content → ping réel, séparé de la description
       const mention = `<@${newMember.id}>`;
 
       const embedData = guildData.welcomeEmbed as Record<string, unknown> | null;
