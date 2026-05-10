@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma *)",
+      "Bash(npm run *)",
+      "Bash(cd /mnt/c/Users/CrystallQueen/Documents/Dev/Ryoko-bot_discord && npm run deploy 2>&1)",
+      "Read(//mnt/c/Users/CrystallQueen/Documents/Dev/**)"
+    ]
+  }
+}

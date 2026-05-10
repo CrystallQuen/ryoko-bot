@@ -1,0 +1,53 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ryoko_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ryoko
+      POSTGRES_PASSWORD: ryoko_secure_password
+      POSTGRES_DB: ryoko_bot
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ryoko -d ryoko_bot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ryoko_bot
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://ryoko:ryoko_secure_password@postgres:5432/ryoko_bot
+    env_file:
+      - .env
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./logs:/app/logs
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ryoko_dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - bot
+
+volumes:
+  postgres_data:

@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Guild {
+  id               String   @id
+  name             String
+  language         String   @default("fr")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Welcome
+  welcomeEnabled   Boolean  @default(false)
+  welcomeChannelId String?
+  welcomeMessage   String?
+  welcomeEmbed     Json?
+  welcomeDmEnabled Boolean  @default(false)
+  welcomeDmMessage String?
+  welcomeImageUrl  String?
+
+  // Modération
+  modLogChannelId  String?
+  muteRoleId       String?
+
+  // Niveaux XP
+  levelEnabled     Boolean  @default(false)
+  levelChannelId   String?
+
+  // Relations
+  sanctions        Sanction[]
+  warnings         Warning[]
+  roleReactions    RoleReaction[]
+  ruleMessages     RuleMessage[]
+  events           Event[]
+  userLevels       UserLevel[]
+  gameSessions     GameSession[]
+  antiSpamConfig   AntiSpamConfig?
+  userEconomy      UserEconomy[]
+}
+
+model Sanction {
+  id          String       @id @default(cuid())
+  guildId     String
+  userId      String
+  moderatorId String
+  type        SanctionType
+  reason      String
+  duration    Int?
+  active      Boolean      @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  guild       Guild        @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([active])
+}
+
+enum SanctionType {
+  BAN
+  TEMPBAN
+  KICK
+  MUTE
+  WARN
+}
+
+model Warning {
+  id          String   @id @default(cuid())
+  guildId     String
+  userId      String
+  moderatorId String
+  reason      String
+  createdAt   DateTime @default(now())
+
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, userId])
+}
+
+model RoleReaction {
+  id          String   @id @default(cuid())
+  guildId     String
+  channelId   String
+  messageId   String
+  emoji       String
+  roleId      String
+  category    String?
+  description String?
+  isRule      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  guild       Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, emoji])
+  @@index([guildId])
+  @@index([messageId])
+}
+
+model RuleMessage {
+  id        String   @id @default(cuid())
+  guildId   String
+  messageId String
+  channelId String
+  roleId    String
+  emoji     String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([messageId])
+}
+
+model Event {
+  id             String   @id @default(cuid())
+  guildId        String
+  channelId      String
+  voiceChannelId String?
+  title          String
+  description    String?
+  scheduledAt    DateTime
+  roleId         String?
+  reminded       Boolean  @default(false)
+  discordEventId String?
+  createdBy      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  guild          Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([scheduledAt])
+}
+
+model UserLevel {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  xp        Int      @default(0)
+  level     Int      @default(0)
+  messages  Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+  @@index([guildId, xp])
+}
+
+model GameSession {
+  id        String   @id @default(cuid())
+  guildId   String
+  channelId String
+  type      GameType
+  data      Json
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, channelId, type])
+  @@index([active])
+}
+
+enum GameType {
+  SHIRITORI
+  JP_STORY
+}
+
+model AntiSpamConfig {
+  id           String  @id @default(cuid())
+  guildId      String  @unique
+  enabled      Boolean @default(true)
+  maxMessages  Int     @default(5)
+  timeWindow   Int     @default(5)
+  action       String  @default("mute")
+  muteDuration Int     @default(300)
+
+  guild        Guild   @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+model UserEconomy {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+}
+
+model DashboardSession {
+  id           String   @id @default(cuid())
+  userId       String
+  accessToken  String   @unique
+  refreshToken String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}

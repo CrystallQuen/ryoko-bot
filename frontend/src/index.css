@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-discord-darkest;
+  }
+  body {
+    @apply bg-discord-darkest text-discord-light font-sans antialiased;
+  }
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-discord-darkest;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-discord-darker rounded-full;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-discord-darker rounded-lg border border-discord-darkest/50 p-6;
+  }
+  .btn-primary {
+    @apply bg-discord-blurple hover:bg-discord-blurple/90 text-white font-medium px-4 py-2 rounded-md transition-colors;
+  }
+  .btn-danger {
+    @apply bg-discord-red hover:bg-discord-red/90 text-white font-medium px-4 py-2 rounded-md transition-colors;
+  }
+  .btn-success {
+    @apply bg-discord-green hover:bg-discord-green/90 text-discord-darkest font-medium px-4 py-2 rounded-md transition-colors;
+  }
+  .input {
+    @apply bg-discord-darkest border border-discord-darkest/80 rounded-md px-3 py-2 text-discord-light placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-discord-blurple/50 w-full;
+  }
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+}
