@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc && cd frontend && npm install && npm run build",
+    "build": "prisma generate && tsc && npm install --prefix frontend && npm run build --prefix frontend",
     "start": "node dist/index.js",
     "deploy": "tsx src/bot/deploy-commands.ts",
     "db:generate": "prisma generate",
