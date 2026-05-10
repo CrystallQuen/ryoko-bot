@@ -24,11 +24,12 @@ const event: BotEvent = {
         logger.warn('Rôle Membre introuvable', { guildId: member.guild.id, roleId: MEMBRE_ROLE_ID });
       }
 
-      // Crée ou réinitialise l'entrée — welcomeSentAt à null pour que le welcome
-      // se déclenche correctement, même si la personne avait déjà rejoint par le passé
+      // Crée l'entrée si elle n'existe pas — NE PAS reset welcomeSentAt ici
+      // (le reset est géré par guildMemberRemove pour éviter la course critique
+      //  entre les deux instances Railway)
       await prisma.userLevel.upsert({
         where: { guildId_userId: { guildId: member.guild.id, userId: member.id } },
-        update: { welcomeSentAt: null },
+        update: {},
         create: { guildId: member.guild.id, userId: member.id },
       });
     } catch (error) {
