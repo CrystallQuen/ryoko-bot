@@ -13,7 +13,8 @@ export async function loadEvents(client: ExtendedClient): Promise<void> {
   for (const file of eventFiles) {
     try {
       const filePath = pathToFileURL(path.join(eventsPath, file)).href;
-      const event: BotEvent = (await import(filePath)).default;
+      const raw = await import(filePath);
+      const event: BotEvent = raw.default?.default ?? raw.default;
 
       if (event.once) {
         client.once(event.name, (...args) => event.execute(...args));

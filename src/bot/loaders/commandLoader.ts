@@ -19,7 +19,8 @@ export async function loadCommands(client: ExtendedClient): Promise<void> {
     for (const file of commandFiles) {
       try {
         const filePath = pathToFileURL(path.join(folderPath, file)).href;
-        const command: SlashCommand = (await import(filePath)).default;
+        const raw = await import(filePath);
+        const command: SlashCommand = raw.default?.default ?? raw.default;
 
         if (!command?.data || !command?.execute) {
           logger.warn(`⚠️ Commande invalide : ${file}`);
