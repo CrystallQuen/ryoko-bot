@@ -7,6 +7,9 @@ import { generateWelcomeCard } from '../modules/welcome/welcomeCard';
 const MEMBRE_ROLE_ID = '1394696937713831997';
 const MEMBRE_ROLE_NAME = /^membre$/i;
 
+// Empêche le double envoi si plusieurs events GuildMemberUpdate arrivent en rafale
+const welcomeCooldown = new Set<string>();
+
 const event: BotEvent = {
   name: 'guildMemberUpdate',
   async execute(oldMember: GuildMember | PartialGuildMember, newMember: GuildMember) {
@@ -19,6 +22,12 @@ const event: BotEvent = {
       const gainedMembre = !hasMembre(oldMember) && hasMembre(newMember);
 
       if (!gainedMembre) return;
+
+      // Cooldown 30s par membre pour éviter le double envoi
+      const cooldownKey = `${newMember.guild.id}:${newMember.id}`;
+      if (welcomeCooldown.has(cooldownKey)) return;
+      welcomeCooldown.add(cooldownKey);
+      setTimeout(() => welcomeCooldown.delete(cooldownKey), 30_000);
 
       const guildData = await getOrCreateGuild(newMember.guild.id, newMember.guild.name);
 
