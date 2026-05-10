@@ -31,6 +31,9 @@ export function createDashboard(client: Client): { app: express.Application; io:
     },
   });
 
+  // Nécessaire sur Railway (reverse proxy) pour que express-rate-limit identifie correctement les IPs
+  app.set('trust proxy', 1);
+
   // Sécurité & middlewares
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(compression());
