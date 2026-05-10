@@ -143,15 +143,16 @@ model Event {
 }
 
 model UserLevel {
-  id        String   @id @default(cuid())
-  guildId   String
-  userId    String
-  xp        Int      @default(0)
-  level     Int      @default(0)
-  messages  Int      @default(0)
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  guildId       String
+  userId        String
+  xp            Int       @default(0)
+  level         Int       @default(0)
+  messages      Int       @default(0)
+  welcomeSentAt DateTime?
+  updatedAt     DateTime  @updatedAt
 
-  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  guild         Guild     @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@unique([guildId, userId])
   @@index([guildId, xp])

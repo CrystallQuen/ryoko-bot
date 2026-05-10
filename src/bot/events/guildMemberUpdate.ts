@@ -1,6 +1,6 @@
 import { GuildMember, EmbedBuilder, AttachmentBuilder, PartialGuildMember } from 'discord.js';
 import { BotEvent } from '../../types';
-import { getOrCreateGuild } from '../../database';
+import { prisma, getOrCreateGuild } from '../../database';
 import { logger } from '../../utils/logger';
 import { generateWelcomeCard } from '../modules/welcome/welcomeCard';
 
@@ -23,11 +23,19 @@ const event: BotEvent = {
 
       if (!gainedMembre) return;
 
-      // Cooldown 30s par membre pour éviter le double envoi
+      // Cooldown mémoire (même instance)
       const cooldownKey = `${newMember.guild.id}:${newMember.id}`;
       if (welcomeCooldown.has(cooldownKey)) return;
       welcomeCooldown.add(cooldownKey);
       setTimeout(() => welcomeCooldown.delete(cooldownKey), 30_000);
+
+      // Déduplication DB atomique — protège contre plusieurs instances Railway
+      // updateMany ne met à jour que si welcomeSentAt est encore NULL → une seule instance gagne
+      const claimed = await prisma.userLevel.updateMany({
+        where: { guildId: newMember.guild.id, userId: newMember.id, welcomeSentAt: null },
+        data: { welcomeSentAt: new Date() },
+      });
+      if (claimed.count === 0) return; // Une autre instance a déjà envoyé le welcome
 
       const guildData = await getOrCreateGuild(newMember.guild.id, newMember.guild.name);
 

@@ -8,7 +8,10 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\CrystallQueen\\\\Documents\\\\Dev\\\\Ryoko-bot_discord\" -Force)",
       "Bash(Select-Object Name, Mode)",
       "Bash(npm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(Get-Process node *)",
+      "Bash(Stop-Process -Force)",
+      "Bash(Start-Sleep -Seconds 2)"
     ]
   }
 }
