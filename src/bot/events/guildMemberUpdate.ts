@@ -48,7 +48,7 @@ const event: BotEvent = {
 
       const displayName = newMember.displayName || newMember.user.username;
 
-      let message = guildData.welcomeMessage ?? `🌸 ようこそ！{user} sur le serveur **{guild}** ! ✨`;
+      let message = guildData.welcomeMessage ?? `🌸 ようこそ！sur le serveur **{guild}** ! ✨`;
       message = message
         // {user} et <@user> (littéral) → nom affiché avec @ pour la description
         .replace(/{user}/g, `@${displayName}`)
