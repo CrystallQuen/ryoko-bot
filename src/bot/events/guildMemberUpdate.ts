@@ -4,16 +4,19 @@ import { getOrCreateGuild } from '../../database';
 import { logger } from '../../utils/logger';
 import { generateWelcomeCard } from '../modules/welcome/welcomeCard';
 
+const MEMBRE_ROLE_ID = '1394696937713831997';
 const MEMBRE_ROLE_NAME = /^membre$/i;
 
 const event: BotEvent = {
   name: 'guildMemberUpdate',
   async execute(oldMember: GuildMember | PartialGuildMember, newMember: GuildMember) {
     try {
-      // Détecte si le rôle "Membre" vient d'être ajouté
-      const gainedMembre =
-        !oldMember.roles.cache.some((r) => MEMBRE_ROLE_NAME.test(r.name)) &&
-        newMember.roles.cache.some((r) => MEMBRE_ROLE_NAME.test(r.name));
+      // Détecte si le rôle Membre vient d'être ajouté (vérifie par ID puis par nom)
+      const hasMembre = (m: GuildMember | PartialGuildMember) =>
+        m.roles.cache.has(MEMBRE_ROLE_ID) ||
+        m.roles.cache.some((r) => MEMBRE_ROLE_NAME.test(r.name));
+
+      const gainedMembre = !hasMembre(oldMember) && hasMembre(newMember);
 
       if (!gainedMembre) return;
 

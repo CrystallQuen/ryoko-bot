@@ -12,7 +12,11 @@ const event: BotEvent = {
       const guildData = await getOrCreateGuild(member.guild.id, member.guild.name);
 
       // Attribution automatique du rôle Membre → déclenche guildMemberUpdate → carte de bienvenue
-      const membreRole = member.guild.roles.cache.get(MEMBRE_ROLE_ID);
+      // On utilise fetch pour être sûr que le rôle est disponible même si le cache est vide
+      const membreRole =
+        member.guild.roles.cache.get(MEMBRE_ROLE_ID) ??
+        await member.guild.roles.fetch(MEMBRE_ROLE_ID).catch(() => null);
+
       if (membreRole) {
         await member.roles.add(membreRole, 'Attribution automatique à l\'arrivée');
         logger.info('Rôle Membre attribué', { guildId: member.guild.id, userId: member.id });
