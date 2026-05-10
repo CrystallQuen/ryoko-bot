@@ -49,11 +49,15 @@ const event: BotEvent = {
         await cmd.execute(interaction as ChatInputCommandInteraction);
       } catch (error) {
         logger.error(`Erreur dans la commande /${interaction.commandName}`, { error, userId, guildId: interaction.guildId });
-        const errorReply = { embeds: [errorEmbed('Erreur', 'Une erreur inattendue s\'est produite.')], ephemeral: true };
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp(errorReply);
-        } else {
-          await interaction.reply(errorReply);
+        try {
+          const errorReply = { embeds: [errorEmbed('Erreur', 'Une erreur inattendue s\'est produite.')], ephemeral: true };
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp(errorReply);
+          } else {
+            await interaction.reply(errorReply);
+          }
+        } catch (replyError) {
+          logger.debug('Impossible d\'envoyer la réponse d\'erreur (interaction expirée)', { replyError });
         }
       }
     }

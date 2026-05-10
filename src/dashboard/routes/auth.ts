@@ -8,6 +8,11 @@ export const authRouter = Router();
 
 const DISCORD_API = 'https://discord.com/api/v10';
 
+// Cache mémoire pour /me — TTL 5 min par session
+interface CachedMe { user: unknown; guilds: unknown; at: number }
+const meCache = new Map<string, CachedMe>();
+const ME_TTL = 5 * 60 * 1000;
+
 authRouter.get('/login', (_req: Request, res: Response) => {
   const params = new URLSearchParams({
     client_id: process.env.DISCORD_CLIENT_ID!,
@@ -83,21 +88,29 @@ authRouter.get('/me', async (req: Request, res: Response) => {
   if (!token) return res.status(401).json({ error: 'Non authentifié' });
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string; sessionId: string };
     const session = await prisma.dashboardSession.findFirst({
       where: { userId: payload.userId, accessToken: { not: '' }, expiresAt: { gte: new Date() } },
     });
 
     if (!session) return res.status(401).json({ error: 'Session expirée' });
 
-    const userRes = await axios.get(`${DISCORD_API}/users/@me`, {
-      headers: { Authorization: `Bearer ${session.accessToken}` },
-    });
+    // Retourne le cache si encore frais
+    const cached = meCache.get(session.id);
+    if (cached && Date.now() - cached.at < ME_TTL) {
+      return res.json({ user: cached.user, guilds: cached.guilds });
+    }
 
-    const guildsRes = await axios.get(`${DISCORD_API}/users/@me/guilds`, {
-      headers: { Authorization: `Bearer ${session.accessToken}` },
-    });
+    const [userRes, guildsRes] = await Promise.all([
+      axios.get(`${DISCORD_API}/users/@me`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      }),
+      axios.get(`${DISCORD_API}/users/@me/guilds`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      }),
+    ]);
 
+    meCache.set(session.id, { user: userRes.data, guilds: guildsRes.data, at: Date.now() });
     res.json({ user: userRes.data, guilds: guildsRes.data });
   } catch {
     res.status(401).json({ error: 'Token invalide' });
@@ -108,7 +121,8 @@ authRouter.post('/logout', async (req: Request, res: Response) => {
   const token = req.cookies?.token;
   if (token) {
     try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+      const payload = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string; sessionId: string };
+      meCache.delete(payload.sessionId);
       await prisma.dashboardSession.deleteMany({ where: { userId: payload.userId } });
     } catch {
       // token invalide, on déconnecte quand même

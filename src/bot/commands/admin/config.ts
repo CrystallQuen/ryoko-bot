@@ -32,7 +32,11 @@ const command: SlashCommand = {
     ),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    try {
+      await interaction.deferReply({ ephemeral: true });
+    } catch {
+      return; // Interaction expirée avant le defer
+    }
 
     const guild = interaction.guild!;
     const sub = interaction.options.getSubcommand();

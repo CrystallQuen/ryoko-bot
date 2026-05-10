@@ -52,7 +52,7 @@ export default function Login() {
       </div>
 
       <footer className="text-center py-4 text-gray-600 text-sm">
-        Ryoko Bot © 2025 — Conçu avec ❤️ pour les serveurs japonais
+        Ryoko Bot © 2026 — Conçu avec ❤️ pour les serveurs japonais
       </footer>
     </div>
   );

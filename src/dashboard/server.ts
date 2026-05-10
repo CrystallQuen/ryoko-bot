@@ -51,20 +51,23 @@ export function createDashboard(client: Client): { app: express.Application; io:
     app.use(morgan('dev'));
   }
 
-  // Rate limiting
+  // Rate limiting global (toutes les routes API)
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 200,
+    max: 300,
     message: { error: 'Trop de requêtes, réessayez plus tard.' },
+    skip: (req) => req.path === '/api/auth/me', // /me est déjà protégé par authMiddleware
   });
   app.use('/api/', limiter);
 
+  // Limiter strict uniquement sur login/callback (flux OAuth2)
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    max: 30,
     message: { error: 'Trop de tentatives d\'authentification.' },
   });
-  app.use('/api/auth', authLimiter);
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/callback', authLimiter);
 
   // Injection du client Discord
   app.set('client', client);

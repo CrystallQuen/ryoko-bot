@@ -4,7 +4,11 @@
       "Bash(npx prisma *)",
       "Bash(npm run *)",
       "Bash(cd /mnt/c/Users/CrystallQueen/Documents/Dev/Ryoko-bot_discord && npm run deploy 2>&1)",
-      "Read(//mnt/c/Users/CrystallQueen/Documents/Dev/**)"
+      "Read(//mnt/c/Users/CrystallQueen/Documents/Dev/**)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\CrystallQueen\\\\Documents\\\\Dev\\\\Ryoko-bot_discord\" -Force)",
+      "Bash(Select-Object Name, Mode)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)"
     ]
   }
 }
