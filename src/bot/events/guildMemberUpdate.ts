@@ -46,12 +46,15 @@ const event: BotEvent = {
 
       const memberCount = newMember.guild.memberCount;
 
-      let message = guildData.welcomeMessage ?? `Bienvenue sur **{guild}**, {user} ! 🎉`;
+      let message = guildData.welcomeMessage ?? `🌸 ようこそ！{user} sur le serveur **{guild}** ! ✨`;
       message = message
         .replace(/{user}/g, `<@${newMember.id}>`)
         .replace(/{username}/g, newMember.user.username)
         .replace(/{guild}/g, newMember.guild.name)
         .replace(/{count}/g, memberCount.toString());
+
+      // Mention séparée dans content pour que Discord notifie réellement l'utilisateur
+      const mention = `<@${newMember.id}>`;
 
       const embedData = guildData.welcomeEmbed as Record<string, unknown> | null;
       const accentColor: string = (embedData?.color as string) ?? '#f25858';
@@ -96,12 +99,13 @@ const event: BotEvent = {
         }
 
         await channel.send({
+          content: mention,
           embeds: [embed],
           ...(cardAttachment ? { files: [cardAttachment] } : {}),
         });
       } else {
         await channel.send({
-          content: message,
+          content: `${mention}\n${message}`,
           ...(cardAttachment ? { files: [cardAttachment] } : {}),
         });
       }
