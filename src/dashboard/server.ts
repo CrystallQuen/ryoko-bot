@@ -87,8 +87,17 @@ export function createDashboard(client: Client): { app: express.Application; io:
   app.use('/api/guilds', authMiddleware, settingsRouter);
 
   // Servir le frontend en production
-  const frontendPath = path.join(__dirname, '../../frontend/dist');
-  app.use(express.static(frontendPath));
+  // process.cwd() = /app (WORKDIR Docker), plus fiable que __dirname avec chemins relatifs
+  const frontendPath = path.join(process.cwd(), 'frontend', 'dist');
+  app.use(express.static(frontendPath, {
+    etag: true,
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('.html')) {
+        // index.html jamais mis en cache pour que les nouveaux builds soient pris immédiatement
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    },
+  }));
   app.get('*', (_req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
   });
