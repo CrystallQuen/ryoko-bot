@@ -1,6 +1,7 @@
 import {
   SlashCommandBuilder,
   SlashCommandSubcommandsOnlyBuilder,
+  SlashCommandOptionsOnlyBuilder,
   ChatInputCommandInteraction,
   ContextMenuCommandBuilder,
   Collection,
@@ -13,6 +14,7 @@ export interface SlashCommand {
   data:
     | SlashCommandBuilder
     | SlashCommandSubcommandsOnlyBuilder
+    | SlashCommandOptionsOnlyBuilder
     | Omit<SlashCommandBuilder, 'addSubcommand' | 'addSubcommandGroup'>;
   execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
   cooldown?: number;
@@ -21,7 +23,8 @@ export interface SlashCommand {
 export interface BotEvent {
   name: string;
   once?: boolean;
-  execute: (...args: unknown[]) => Promise<void> | void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  execute: (...args: any[]) => Promise<void> | void;
 }
 
 export interface ButtonHandler {

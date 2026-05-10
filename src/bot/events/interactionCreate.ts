@@ -3,6 +3,7 @@ import {
   ChatInputCommandInteraction,
   ButtonInteraction,
   StringSelectMenuInteraction,
+  Collection,
 } from 'discord.js';
 import { BotEvent, ExtendedClient } from '../../types';
 import { errorEmbed } from '../../utils/embed';
@@ -20,7 +21,7 @@ const event: BotEvent = {
 
       // Cooldown
       if (!client.cooldowns.has(cmd.data.name)) {
-        client.cooldowns.set(cmd.data.name, new Map());
+        client.cooldowns.set(cmd.data.name, new Collection());
       }
       const timestamps = client.cooldowns.get(cmd.data.name)!;
       const cooldown = (cmd.cooldown ?? 3) * 1000;

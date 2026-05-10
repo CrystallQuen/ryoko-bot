@@ -33,16 +33,17 @@ export async function checkAntiSpam(message: Message, config: AntiSpamConfig): P
 
     const reason = `Anti-spam: ${recent.length} messages en ${config.timeWindow}s`;
 
+    const canSend = 'send' in message.channel;
     try {
       if (config.action === 'mute' || config.action === 'timeout') {
         await member.timeout(config.muteDuration * 1000, reason);
-        await message.channel.send(`⚠️ <@${userId}> a été mis en sourdine pour spam.`).catch(() => null);
+        if (canSend) await (message.channel as { send: Function }).send(`⚠️ <@${userId}> a été mis en sourdine pour spam.`).catch(() => null);
       } else if (config.action === 'kick') {
         await member.kick(reason);
       } else if (config.action === 'ban') {
         await message.guild!.bans.create(userId, { reason });
       } else {
-        await message.channel.send(`⚠️ <@${userId}>, évitez le spam !`).catch(() => null);
+        if (canSend) await (message.channel as { send: Function }).send(`⚠️ <@${userId}>, évitez le spam !`).catch(() => null);
       }
 
       logger.warn('Anti-spam déclenché', { guildId, userId, action: config.action });
