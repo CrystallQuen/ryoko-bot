@@ -58,15 +58,15 @@ export async function buildDictionaryEmbed(kanji: string): Promise<EmbedBuilder 
 
   const embed = new EmbedBuilder()
     .setColor('#4a90d9')
-    .setTitle(`漢字情報 — ${kanji}`)
+    .setTitle(`KANJI — ${kanji}`)
     .addFields(
       { name: 'Kunyomi', value: kun, inline: true },
       { name: 'Onyomi', value: on, inline: true },
       { name: '​', value: '​', inline: true },
-      { name: 'Stroke Count', value: `${info.stroke_count}`, inline: true },
-      { name: 'JLPT', value: jlpt, inline: true },
+      { name: 'Nombre de traits', value: `${info.stroke_count}`, inline: true },
+      { name: 'Niveau JLPT', value: jlpt, inline: true },
       { name: '​', value: '​', inline: true },
-      { name: 'Meaning', value: meaning },
+      { name: 'Signification', value: meaning },
     );
 
   const examples = words
