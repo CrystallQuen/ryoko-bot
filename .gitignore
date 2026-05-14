@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+.claude/
 *.log
 logs/
 frontend/node_modules/
