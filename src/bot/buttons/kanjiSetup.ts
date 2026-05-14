@@ -91,7 +91,7 @@ const handler: ButtonHandler = {
           `${s.totalQuestions} question${s.totalQuestions > 1 ? 's' : ''} • Niveau ${cfg.level}`
         );
         channel.send({ embeds: [endEmbed] }).catch(() => null);
-        saveQuizStats(s).catch(() => null);
+        saveQuizStats(s).catch((err) => logger.error('saveQuizStats non catchée', { err }));
         destroySession(channelId);
         logger.info('Quiz kanji terminé', { channelId, scores: s.scores });
       }

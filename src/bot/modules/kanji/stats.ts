@@ -5,7 +5,11 @@ import { logger } from '../../../utils/logger';
 
 export async function saveQuizStats(session: KanjiSession): Promise<void> {
   const entries = Object.entries(session.scores);
-  if (entries.length === 0) return;
+  logger.info('saveQuizStats appelé', { guildId: session.guildId, entries });
+  if (entries.length === 0) {
+    logger.info('saveQuizStats: aucun score, abandon');
+    return;
+  }
 
   try {
     await getOrCreateGuild(session.guildId, session.guildId);
@@ -27,8 +31,9 @@ export async function saveQuizStats(session: KanjiSession): Promise<void> {
         })
       )
     );
+    logger.info('saveQuizStats: sauvegarde réussie', { guildId: session.guildId, entries });
   } catch (err) {
-    logger.error('Erreur sauvegarde stats kanji', { err });
+    logger.error('Erreur sauvegarde stats kanji', { err, guildId: session.guildId });
   }
 }
 
