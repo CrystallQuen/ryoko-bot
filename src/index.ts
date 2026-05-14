@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { createServer } from 'http';
 import { logger } from './utils/logger';
 import { connectDatabase } from './database';
 import { initializeBot } from './bot/client';
@@ -22,6 +23,15 @@ async function main(): Promise<void> {
 
   // Connexion Discord
   await client.login(process.env.DISCORD_TOKEN!);
+
+  // Health check HTTP pour Fly.io (garde la machine active)
+  const port = parseInt(process.env.PORT ?? '8080', 10);
+  createServer((_, res) => {
+    res.writeHead(200);
+    res.end('ok');
+  }).listen(port, () => {
+    logger.info(`🩺 Health check en écoute sur le port ${port}`);
+  });
 
   // Gestion de l'arrêt propre
   process.on('SIGINT', async () => {
