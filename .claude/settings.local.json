@@ -13,7 +13,8 @@
       "Bash(Stop-Process -Force)",
       "Bash(Start-Sleep -Seconds 2)",
       "PowerShell(Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Output \"done\")",
-      "Bash(Remove-Item \"c:\\\\Users\\\\CrystallQueen\\\\Documents\\\\Dev\\\\Ryoko-bot_discord\\\\src\\\\bot\\\\buttons\\\\kanjiAnswer.ts\" -Force)"
+      "Bash(Remove-Item \"c:\\\\Users\\\\CrystallQueen\\\\Documents\\\\Dev\\\\Ryoko-bot_discord\\\\src\\\\bot\\\\buttons\\\\kanjiAnswer.ts\" -Force)",
+      "Bash(git checkout *)"
     ]
   }
 }
