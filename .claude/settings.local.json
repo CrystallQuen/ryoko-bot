@@ -19,7 +19,19 @@
       "Bash(netstat -ano)",
       "Bash(findstr \":4000\")",
       "Bash(taskkill /PID 16440 /F)",
-      "PowerShell(Stop-Process -Id 24956 -Force)"
+      "PowerShell(Stop-Process -Id 24956 -Force)",
+      "Bash(railway link *)",
+      "Bash(railway up *)",
+      "Bash(git add *)",
+      "Bash(git push *)",
+      "Bash(railway status *)",
+      "Bash(git commit *)",
+      "PowerShell(iwr https://fly.io/install.ps1 -useb | iex 2>&1)",
+      "PowerShell(& \"$env:USERPROFILE\\\\.fly\\\\bin\\\\flyctl.exe\" auth signup 2>&1)",
+      "PowerShell(cd \"C:\\\\Users\\\\CrystallQueen\\\\Documents\\\\Dev\\\\Ryoko-bot_discord\" ; & \"$env:USERPROFILE\\\\.fly\\\\bin\\\\flyctl.exe\" launch --no-deploy --name ryoko-bot 2>&1)",
+      "PowerShell(cd \"C:\\\\Users\\\\CrystallQueen\\\\Documents\\\\Dev\\\\Ryoko-bot_discord\" ; & \"$env:USERPROFILE\\\\.fly\\\\bin\\\\flyctl.exe\" secrets set DISCORD_TOKEN=\"MTQxNTM0NjE1NzU0NjM3NzIzNw.Gl29mK.lezpKbUjA4S4tQYzHKnzAdm8ahrKD1Yvkw_A2w\" DISCORD_CLIENT_ID=\"1415346157546377237\" NODE_ENV=\"production\" 2>&1)",
+      "PowerShell(cd \"C:\\\\Users\\\\CrystallQueen\\\\Documents\\\\Dev\\\\Ryoko-bot_discord\" ; & \"$env:USERPROFILE\\\\.fly\\\\bin\\\\flyctl.exe\" deploy 2>&1)",
+      "PowerShell(cd \"C:\\\\Users\\\\CrystallQueen\\\\Documents\\\\Dev\\\\Ryoko-bot_discord\" ; & \"$env:USERPROFILE\\\\.fly\\\\bin\\\\flyctl.exe\" logs --no-tail 2>&1 | Select-Object -Last 30)"
     ]
   }
 }

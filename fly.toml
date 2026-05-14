@@ -1,0 +1,12 @@
+app = 'ryoko-bot'
+primary_region = 'cdg'
+
+[build]
+
+[deploy]
+  release_command = 'npx prisma db push --skip-generate'
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
