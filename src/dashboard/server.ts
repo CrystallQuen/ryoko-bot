@@ -122,6 +122,16 @@ export function createDashboard(client: Client): { app: express.Application; io:
   });
 
   const port = parseInt(process.env.PORT ?? process.env.BOT_API_PORT ?? '4000', 10);
+
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.error(`Port ${port} déjà utilisé — arrêtez l'autre processus et relancez.`);
+      process.exit(1);
+    } else {
+      throw err;
+    }
+  });
+
   httpServer.listen(port, () => {
     logger.info(`🌐 Dashboard API démarré sur le port ${port}`);
   });
