@@ -20,6 +20,9 @@ const command: SlashCommand = {
     )
     .addSubcommand((sub) =>
       sub.setName('stop').setDescription('Arrêter le quiz en cours et afficher les scores')
+    )
+    .addSubcommand((sub) =>
+      sub.setName('score').setDescription('Voir le tableau des scores de la partie en cours')
     ),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -75,6 +78,19 @@ const command: SlashCommand = {
         destroySession(interaction.channelId);
         await interaction.reply({ embeds: [embed] });
         logger.info('Quiz kanji arrêté manuellement', { channelId: interaction.channelId });
+
+      } else if (sub === 'score') {
+        const session = getSession(interaction.channelId);
+        if (!session?.active) {
+          await interaction.reply({ content: '❌ Aucun quiz en cours dans ce salon.', ephemeral: true });
+          return;
+        }
+        const embed = buildScoreEmbed(
+          session,
+          '📊 Scores en cours',
+          `Question ${session.current}/${session.totalQuestions} • Niveau ${session.level}`
+        );
+        await interaction.reply({ embeds: [embed], ephemeral: true });
       }
     } catch (err) {
       logger.debug('Erreur interaction /kanji', { err });
