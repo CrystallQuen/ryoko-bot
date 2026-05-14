@@ -70,13 +70,13 @@ const command: SlashCommand = {
     .addSubcommand((sub) => sub.setName('stop').setDescription("Terminer l'histoire"))
     .addSubcommand((sub) =>
       sub
-        .setName('write')
+        .setName('ecrire')
         .setDescription("Continuer l'histoire")
         .addStringOption((o) =>
           o.setName('phrase').setDescription('Votre phrase en japonais').setRequired(true)
         )
     )
-    .addSubcommand((sub) => sub.setName('scores').setDescription('Voir les scores')),
+    .addSubcommand((sub) => sub.setName('classement').setDescription('Voir les scores')),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     await interaction.deferReply();
@@ -126,7 +126,7 @@ const command: SlashCommand = {
               `Je commence l'histoire :\n\n> ${startSentence}\n\nContinuez avec \`/jp-story write\` !`
             )
             .addFields({
-              name: 'Système de score',
+              name: 'Système de points',
               value:
                 '• Kanji : +2 pts/kanji\n• Phrase longue : +5 pts\n• Ponctuation : +3 pts\n• Mélange latin : -5 pts',
             })
@@ -183,7 +183,7 @@ const command: SlashCommand = {
       return;
     }
 
-    if (sub === 'write') {
+    if (sub === 'ecrire') {
       if (!existing) {
         await interaction.editReply({
           embeds: [
@@ -209,7 +209,7 @@ const command: SlashCommand = {
         .setTitle('✍️ Contribution ajoutée')
         .addFields(
           { name: 'Votre phrase', value: phrase },
-          { name: 'Score', value: `**${score} pts**`, inline: true },
+          { name: 'Points', value: `**${score} pts**`, inline: true },
           { name: 'Analyse', value: feedback.join('\n') || 'Pas de bonus', inline: false }
         )
         .setTimestamp();
@@ -222,7 +222,7 @@ const command: SlashCommand = {
       return;
     }
 
-    if (sub === 'scores') {
+    if (sub === 'classement') {
       if (!existing) {
         await interaction.editReply({
           embeds: [errorEmbed("Pas d'histoire", 'Aucune histoire en cours.')],

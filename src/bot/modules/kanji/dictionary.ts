@@ -58,18 +58,19 @@ async function fetchWordList(kanji: string): Promise<KanjiApiWord[]> {
   }
 }
 
-async function fetchJotobaFrench(word: string): Promise<string | null> {
+// Recherche un mot sur Jotoba et retourne sa traduction française
+async function fetchJotobaFrench(query: string): Promise<string | null> {
   try {
     const res = await fetch('https://jotoba.de/api/search/words', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: word, language: 'French', no_english: false }),
+      body: JSON.stringify({ query, language: 'French', no_english: false }),
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { words: JotobaWord[] };
     const match = data.words?.find(
-      (w) => w.reading.kanji === word || w.reading.kana === word
+      (w) => w.reading.kanji === query || w.reading.kana === query
     );
     if (!match) return null;
     const frSense = match.senses.find((s) => s.language === 'French');
@@ -77,6 +78,20 @@ async function fetchJotobaFrench(word: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+// Cherche la signification française du kanji via sa lecture kunyomi
+async function fetchKanjiFrenchMeaning(info: KanjiApiData): Promise<string | null> {
+  // Nettoie les lectures kunyomi (退.く → しりぞく, またた.く → またたく)
+  const readings = info.kun_readings
+    .map((r) => r.replace(/[.\-]/g, '').replace(/-$/, ''))
+    .filter((r) => r.length > 0);
+
+  for (const reading of readings.slice(0, 3)) {
+    const fr = await fetchJotobaFrench(reading);
+    if (fr) return fr;
+  }
+  return null;
 }
 
 // ── Embed builder ─────────────────────────────────────────────────────────────
@@ -89,8 +104,11 @@ export async function buildDictionaryEmbed(kanji: string): Promise<EmbedBuilder 
 
   const kun = info.kun_readings.length ? info.kun_readings.join('、') : '—';
   const on = info.on_readings.length ? info.on_readings.join('、') : '—';
-  const meaning = info.meanings.length ? info.meanings.join(', ') : '—';
   const jlpt = info.jlpt ? `N${info.jlpt}` : '—';
+
+  // Signification : on cherche d'abord une traduction française via Jotoba
+  const frMeaning = await fetchKanjiFrenchMeaning(info);
+  const meaning = frMeaning ?? info.meanings.join(', ');
 
   const embed = new EmbedBuilder()
     .setColor('#4a90d9')
@@ -105,18 +123,16 @@ export async function buildDictionaryEmbed(kanji: string): Promise<EmbedBuilder 
       { name: 'Signification', value: meaning },
     );
 
-  // Sélectionne les mots les plus courants contenant le kanji
+  // Mots exemples courants contenant le kanji
   const topWords = wordList
     .filter((w) => w.variants.some((v) => v.written.includes(kanji) && v.priorities.length > 0))
     .slice(0, 5);
 
   if (topWords.length > 0) {
-    // Récupère les traductions françaises en parallèle via Jotoba
     const translations = await Promise.all(
       topWords.map(async (w) => {
         const variant = w.variants.find((v) => v.written.includes(kanji) && v.priorities.length > 0)!;
         const frGloss = await fetchJotobaFrench(variant.written);
-        // Fallback sur la définition anglaise de kanjiapi.dev si Jotoba n'a pas de traduction FR
         const gloss = frGloss ?? w.meanings[0]?.glosses.slice(0, 3).join(', ') ?? '';
         return `**${variant.written}**（${variant.pronounced}）\n${gloss}`;
       })

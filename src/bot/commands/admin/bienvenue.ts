@@ -87,7 +87,7 @@ const command: SlashCommand = {
         )
     )
     .addSubcommand((sub) =>
-      sub.setName('show').setDescription('Voir la configuration actuelle')
+      sub.setName('apercu').setDescription('Voir la configuration actuelle')
     )
     .addSubcommand((sub) =>
       sub.setName('test').setDescription('Envoyer une carte de test ici')
@@ -200,7 +200,7 @@ const command: SlashCommand = {
         });
 
       // ── show ──────────────────────────────────────────────────────────────
-      } else if (sub === 'show') {
+      } else if (sub === 'apercu') {
         const embedData = guildData.welcomeEmbed as Record<string, unknown> | null;
         const embed = new EmbedBuilder()
           .setColor('#5865F2')
@@ -223,12 +223,12 @@ const command: SlashCommand = {
               inline: false,
             },
             {
-              name: '🖼️ Background',
-              value: guildData.welcomeImageUrl ? `[Lien](${guildData.welcomeImageUrl})` : '*(dégradé par défaut)*',
+              name: '🖼️ Arrière-plan',
+              value: guildData.welcomeImageUrl ? `[Voir l'image](${guildData.welcomeImageUrl})` : '*(dégradé par défaut)*',
               inline: true,
             },
             {
-              name: '📩 DM',
+              name: '📩 Message privé',
               value: guildData.welcomeDmEnabled ? '✅ Activé' : '❌ Désactivé',
               inline: true,
             },
