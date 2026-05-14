@@ -1,54 +1,90 @@
 import { EmbedBuilder } from 'discord.js';
 import { logger } from '../../../utils/logger';
 
+// ── kanjiapi.dev ─────────────────────────────────────────────────────────────
+
 interface KanjiApiData {
   kanji: string;
-  grade?: number;
   stroke_count: number;
   meanings: string[];
   kun_readings: string[];
   on_readings: string[];
   jlpt?: number;
+  grade?: number;
 }
 
-interface JishoWord {
-  japanese: { word?: string; reading: string }[];
-  senses: { english_definitions: string[] }[];
+interface KanjiApiWord {
+  meanings: { glosses: string[] }[];
+  variants: { written: string; pronounced: string; priorities: string[] }[];
 }
 
-async function fetchKanjiData(kanji: string): Promise<KanjiApiData | null> {
+// ── Jotoba ───────────────────────────────────────────────────────────────────
+
+interface JotobaSense {
+  glosses: string[];
+  language: string;
+}
+
+interface JotobaWord {
+  reading: { kana: string; kanji?: string };
+  senses: JotobaSense[];
+}
+
+// ── Fetch helpers ─────────────────────────────────────────────────────────────
+
+async function fetchKanjiInfo(kanji: string): Promise<KanjiApiData | null> {
   try {
     const res = await fetch(`https://kanjiapi.dev/v1/kanji/${encodeURIComponent(kanji)}`, {
-      headers: { 'User-Agent': 'RyokoBot/1.0' },
       signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) return null;
     return res.json() as Promise<KanjiApiData>;
   } catch (err) {
-    logger.warn('fetchKanjiData échoué', { kanji, err });
+    logger.warn('fetchKanjiInfo échoué', { kanji, err });
     return null;
   }
 }
 
-async function fetchWordExamples(kanji: string): Promise<JishoWord[]> {
+async function fetchWordList(kanji: string): Promise<KanjiApiWord[]> {
   try {
-    const res = await fetch(
-      `https://jisho.org/api/v1/search/words?keyword=${encodeURIComponent(kanji)}`,
-      { headers: { 'User-Agent': 'RyokoBot/1.0' }, signal: AbortSignal.timeout(6000) }
-    );
+    const res = await fetch(`https://kanjiapi.dev/v1/words/${encodeURIComponent(kanji)}`, {
+      signal: AbortSignal.timeout(5000),
+    });
     if (!res.ok) return [];
-    const data = (await res.json()) as { data: JishoWord[] };
-    return data.data?.slice(0, 8) ?? [];
+    return res.json() as Promise<KanjiApiWord[]>;
   } catch (err) {
-    logger.warn('fetchWordExamples échoué', { kanji, err });
+    logger.warn('fetchWordList échoué', { kanji, err });
     return [];
   }
 }
 
+async function fetchJotobaFrench(word: string): Promise<string | null> {
+  try {
+    const res = await fetch('https://jotoba.de/api/search/words', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: word, language: 'French', no_english: false }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { words: JotobaWord[] };
+    const match = data.words?.find(
+      (w) => w.reading.kanji === word || w.reading.kana === word
+    );
+    if (!match) return null;
+    const frSense = match.senses.find((s) => s.language === 'French');
+    return frSense?.glosses.slice(0, 3).join(', ') ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Embed builder ─────────────────────────────────────────────────────────────
+
 export async function buildDictionaryEmbed(kanji: string): Promise<EmbedBuilder | null> {
   if ([...kanji].length !== 1) return null;
 
-  const [info, words] = await Promise.all([fetchKanjiData(kanji), fetchWordExamples(kanji)]);
+  const [info, wordList] = await Promise.all([fetchKanjiInfo(kanji), fetchWordList(kanji)]);
   if (!info) return null;
 
   const kun = info.kun_readings.length ? info.kun_readings.join('、') : '—';
@@ -69,26 +105,26 @@ export async function buildDictionaryEmbed(kanji: string): Promise<EmbedBuilder 
       { name: 'Signification', value: meaning },
     );
 
-  const examples = words
-    .filter((w) => {
-      const jp = w.japanese[0];
-      return jp?.word && jp.word.includes(kanji);
-    })
-    .slice(0, 5)
-    .map((w) => {
-      const jp = w.japanese[0];
-      const word = jp.word!;
-      const reading = jp.reading;
-      const def = w.senses[0]?.english_definitions.slice(0, 3).join(', ') ?? '';
-      return `**${word}**（${reading}）\n${def}`;
-    })
-    .join('\n\n');
+  // Sélectionne les mots les plus courants contenant le kanji
+  const topWords = wordList
+    .filter((w) => w.variants.some((v) => v.written.includes(kanji) && v.priorities.length > 0))
+    .slice(0, 5);
 
-  if (examples) {
-    embed.addFields({ name: 'Exemples de mots', value: examples });
+  if (topWords.length > 0) {
+    // Récupère les traductions françaises en parallèle via Jotoba
+    const translations = await Promise.all(
+      topWords.map(async (w) => {
+        const variant = w.variants.find((v) => v.written.includes(kanji) && v.priorities.length > 0)!;
+        const frGloss = await fetchJotobaFrench(variant.written);
+        // Fallback sur la définition anglaise de kanjiapi.dev si Jotoba n'a pas de traduction FR
+        const gloss = frGloss ?? w.meanings[0]?.glosses.slice(0, 3).join(', ') ?? '';
+        return `**${variant.written}**（${variant.pronounced}）\n${gloss}`;
+      })
+    );
+
+    embed.addFields({ name: 'Mots exemples', value: translations.join('\n\n') });
   }
 
-  embed.setFooter({ text: 'Source : kanjiapi.dev • jisho.org' }).setTimestamp();
-
+  embed.setFooter({ text: 'Source : kanjiapi.dev • jotoba.de' }).setTimestamp();
   return embed;
 }
