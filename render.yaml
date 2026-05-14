@@ -1,0 +1,15 @@
+services:
+  - type: worker
+    name: ryoko-bot
+    runtime: node
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DATABASE_URL
+        sync: false
