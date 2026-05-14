@@ -1,21 +1,14 @@
-import { PrismaClient, Prisma } from '@prisma/client';
 import { EmbedBuilder } from 'discord.js';
+import { prisma, getOrCreateGuild } from '../../../database';
 import type { KanjiSession } from './session';
 import { logger } from '../../../utils/logger';
-
-const prisma = new PrismaClient();
 
 export async function saveQuizStats(session: KanjiSession): Promise<void> {
   const entries = Object.entries(session.scores);
   if (entries.length === 0) return;
 
   try {
-    // Upsert Guild si nécessaire (évite la FK violation)
-    await prisma.guild.upsert({
-      where: { id: session.guildId },
-      update: {},
-      create: { id: session.guildId, name: session.guildId },
-    });
+    await getOrCreateGuild(session.guildId, session.guildId);
 
     await Promise.all(
       entries.map(([userId, correct]) =>
@@ -50,7 +43,6 @@ export async function buildHistoryEmbed(guildId: string): Promise<EmbedBuilder> 
   let board = '';
   for (let i = 0; i < stats.length; i++) {
     const s = stats[i];
-    const ratio = s.played > 0 ? Math.round((s.correct / (s.played * 10)) * 100) : 0;
     board +=
       `${medals[i] ?? `**${i + 1}.**`} <@${s.userId}> — **${s.correct}** bonne${s.correct > 1 ? 's' : ''} réponse${s.correct > 1 ? 's' : ''} ` +
       `sur **${s.played}** quiz\n`;
