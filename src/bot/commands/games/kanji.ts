@@ -96,7 +96,7 @@ const command: SlashCommand = {
           await interaction.reply({ embeds: [embed], flags: 'Ephemeral' });
         } else {
           // Pas de quiz actif : historique global du serveur
-          await interaction.deferReply({ flags: 'Ephemeral' });
+          await interaction.deferReply();
           const embed = await buildHistoryEmbed(guildId);
           await interaction.editReply({ embeds: [embed] });
         }
