@@ -12,11 +12,13 @@ import {
 import { getKanjiByLevel } from '../modules/kanji/data';
 import { logger } from '../../utils/logger';
 
+// Verrou en mémoire pour éviter le double déclenchement
+const starting = new Set<string>();
+
 const handler: ButtonHandler = {
   customId: /^kcfg_start:/,
 
   async execute(interaction: ButtonInteraction): Promise<void> {
-    // Format : kcfg_start:{channelId}:{userId}
     const [, channelId, userId] = interaction.customId.split(':');
     const key = `${channelId}:${userId}`;
 
@@ -25,59 +27,74 @@ const handler: ButtonHandler = {
       return;
     }
 
-    if (getSession(channelId)?.active) {
+    // Double-clic ou double instance — on refuse silencieusement
+    if (getSession(channelId)?.active || starting.has(channelId)) {
       try { await interaction.reply({ content: '❌ Un quiz est déjà en cours dans ce salon !', ephemeral: true }); } catch { /**/ }
       return;
     }
 
-    const cfg = getPendingConfig(key);
-    clearPendingConfig(key);
+    // Verrouiller immédiatement + supprimer le message de config en une seule opération
+    // pour qu'un second clic ne puisse plus passer
+    starting.add(channelId);
+    try {
+      await interaction.update({ embeds: [], components: [] });
+      await interaction.deleteReply();
+    } catch { /**/ }
 
-    if (getKanjiByLevel(cfg.level).length === 0) {
-      try { await interaction.reply({ content: '❌ Aucun kanji disponible pour ce niveau.', ephemeral: true }); } catch { /**/ }
-      return;
+    try {
+      const cfg = getPendingConfig(key);
+      clearPendingConfig(key);
+
+      if (getKanjiByLevel(cfg.level).length === 0) {
+        starting.delete(channelId);
+        return;
+      }
+
+      const channel = interaction.channel as TextChannel;
+      const session = createSession(channelId, userId, cfg);
+
+      const levelLabel: Record<string, string> = {
+        N5: 'N5 — Débutant 🌱',
+        N4: 'N4 — Élémentaire 📗',
+        N3: 'N3 — Intermédiaire 📘',
+      };
+      const timeLabel = cfg.timeoutMs === null ? '♾️ Illimité' : `⏱️ ${cfg.timeoutMs / 1000}s par question`;
+
+      await channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor('#e63946')
+            .setTitle('🎌 Quiz de Kanji — C\'est parti !')
+            .setDescription(
+              `**Niveau :** ${levelLabel[cfg.level]}\n` +
+                `**Questions :** ${cfg.questions}\n` +
+                `**Temps :** ${timeLabel}\n\n` +
+                `Tapez votre réponse directement dans le chat !\n` +
+                `Lectures **et** significations sont acceptées 💬`
+            )
+            .setFooter({ text: `Quiz démarré par ${interaction.user.displayName}` })
+            .setTimestamp(),
+        ],
+      });
+
+      function onEnd() {
+        const s = getSession(channelId);
+        if (!s) return;
+        s.active = false;
+        const endEmbed = buildScoreEmbed(
+          s,
+          '🏁 Quiz terminé — Tableau des scores',
+          `${s.totalQuestions} question${s.totalQuestions > 1 ? 's' : ''} • Niveau ${cfg.level}`
+        );
+        channel.send({ embeds: [endEmbed] }).catch(() => null);
+        destroySession(channelId);
+        logger.info('Quiz kanji terminé', { channelId, scores: s.scores });
+      }
+
+      await nextQuestion(session, channel, onEnd);
+    } finally {
+      starting.delete(channelId);
     }
-
-    const channel = interaction.channel as TextChannel;
-    const session = createSession(channelId, userId, cfg);
-
-    try { await interaction.message.delete(); } catch { /**/ }
-
-    const levelLabel = { N5: 'N5 — Débutant 🌱', N4: 'N4 — Élémentaire 📗', N3: 'N3 — Intermédiaire 📘' };
-    const timeLabel = cfg.timeoutMs === null ? '♾️ Illimité' : `⏱️ ${cfg.timeoutMs / 1000}s par question`;
-
-    await channel.send({
-      embeds: [
-        new EmbedBuilder()
-          .setColor('#e63946')
-          .setTitle('🎌 Quiz de Kanji — C\'est parti !')
-          .setDescription(
-            `**Niveau :** ${levelLabel[cfg.level]}\n` +
-              `**Questions :** ${cfg.questions}\n` +
-              `**Temps :** ${timeLabel}\n\n` +
-              `Tapez votre réponse directement dans le chat !\n` +
-              `Lectures **et** significations sont acceptées 💬`
-          )
-          .setFooter({ text: `Quiz démarré par ${interaction.user.displayName}` })
-          .setTimestamp(),
-      ],
-    });
-
-    function onEnd() {
-      const s = getSession(channelId);
-      if (!s) return;
-      s.active = false;
-      const endEmbed = buildScoreEmbed(
-        s,
-        '🏁 Quiz terminé — Tableau des scores',
-        `${s.totalQuestions} question${s.totalQuestions > 1 ? 's' : ''} • Niveau ${cfg.level}`
-      );
-      channel.send({ embeds: [endEmbed] }).catch(() => null);
-      destroySession(channelId);
-      logger.info('Quiz kanji terminé', { channelId, scores: s.scores });
-    }
-
-    await nextQuestion(session, channel, onEnd);
   },
 };
 
