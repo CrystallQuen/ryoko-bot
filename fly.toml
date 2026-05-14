@@ -3,7 +3,13 @@ primary_region = 'cdg'
 
 [build]
 
+[processes]
+  app = "node dist/index.js"
+
 [[vm]]
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
+
+[restart]
+  policy = 'always'
