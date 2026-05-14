@@ -5,7 +5,7 @@ import { startEventReminders } from '../modules/events/reminder';
 import { startSanctionExpiry } from '../modules/moderation/sanctionExpiry';
 
 const event: BotEvent = {
-  name: 'ready',
+  name: 'clientReady',
   once: true,
   async execute(client: Client) {
     logger.info(`✅ Bot connecté en tant que ${client.user?.tag}`);

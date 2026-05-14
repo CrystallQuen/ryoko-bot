@@ -1,4 +1,4 @@
-import { ButtonInteraction, EmbedBuilder, TextChannel } from 'discord.js';
+﻿import { ButtonInteraction, EmbedBuilder, TextChannel  } from 'discord.js';
 import { ButtonHandler } from '../../types';
 import {
   getSession,
@@ -22,12 +22,12 @@ const handler: ButtonHandler = {
     const key = `${channelId}:${userId}`;
 
     if (interaction.user.id !== userId) {
-      await interaction.reply({ content: '❌ Seul l\'auteur peut démarrer ce quiz.', ephemeral: true }).catch(() => null);
+      await interaction.reply({ content: '❌ Seul l\'auteur peut démarrer ce quiz.', flags: 'Ephemeral' }).catch(() => null);
       return;
     }
 
     if (getSession(channelId)?.active || isStarting(channelId)) {
-      await interaction.reply({ content: '❌ Un quiz est déjà en cours dans ce salon !', ephemeral: true }).catch(() => null);
+      await interaction.reply({ content: '❌ Un quiz est déjà en cours dans ce salon !', flags: 'Ephemeral' }).catch(() => null);
       return;
     }
 

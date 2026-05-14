@@ -1,4 +1,4 @@
-import { StringSelectMenuInteraction } from 'discord.js';
+﻿import { StringSelectMenuInteraction  } from 'discord.js';
 import { SelectMenuHandler } from '../../types';
 import {
   getPendingConfig,
@@ -24,7 +24,7 @@ const handler: SelectMenuHandler = {
       try {
         await interaction.reply({
           content: '❌ Seul l\'auteur de la commande peut configurer ce quiz.',
-          ephemeral: true,
+          flags: 'Ephemeral',
         });
       } catch { /**/ }
       return;

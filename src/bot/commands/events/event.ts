@@ -1,4 +1,4 @@
-import {
+﻿import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   PermissionFlagsBits,
@@ -55,7 +55,7 @@ const command: SlashCommand = {
     .addSubcommand((sub) => sub.setName('list').setDescription('Lister les animations à venir')),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 'Ephemeral' });
 
     const guild = interaction.guild!;
     const moderator = interaction.member as GuildMember;
@@ -257,7 +257,7 @@ const command: SlashCommand = {
       if (isDeferred) {
         await interaction.editReply(errorReply).catch(() => null);
       } else {
-        await interaction.reply({ ...errorReply, ephemeral: true }).catch(() => null);
+        await interaction.reply({ ...errorReply, flags: 'Ephemeral' }).catch(() => null);
       }
     }
   },

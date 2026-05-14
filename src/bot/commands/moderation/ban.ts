@@ -1,4 +1,4 @@
-import {
+﻿import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   PermissionFlagsBits,
@@ -29,7 +29,7 @@ const command: SlashCommand = {
     ),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 'Ephemeral' });
 
     const guild = interaction.guild!;
     const moderator = interaction.member as GuildMember;

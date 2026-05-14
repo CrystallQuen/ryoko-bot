@@ -1,4 +1,4 @@
-import {
+﻿import {
   Interaction,
   ChatInputCommandInteraction,
   ButtonInteraction,
@@ -32,7 +32,7 @@ const event: BotEvent = {
         const expiresAt = timestamps.get(userId)! + cooldown;
         if (now < expiresAt) {
           const remaining = ((expiresAt - now) / 1000).toFixed(1);
-          const reply = { embeds: [errorEmbed('Cooldown', `Attendez encore **${remaining}s** avant de réutiliser cette commande.`)], ephemeral: true };
+          const reply = { embeds: [errorEmbed('Cooldown', `Attendez encore **${remaining}s** avant de réutiliser cette commande.`)], flags: 'Ephemeral' as const };
           if (interaction.replied || interaction.deferred) {
             await interaction.followUp(reply);
           } else {
@@ -50,7 +50,7 @@ const event: BotEvent = {
       } catch (error) {
         logger.error(`Erreur dans la commande /${interaction.commandName}`, { error, userId, guildId: interaction.guildId });
         try {
-          const errorReply = { embeds: [errorEmbed('Erreur', 'Une erreur inattendue s\'est produite.')], ephemeral: true };
+          const errorReply = { embeds: [errorEmbed('Erreur', 'Une erreur inattendue s\'est produite.')], flags: 'Ephemeral' as const };
           if (interaction.replied || interaction.deferred) {
             await interaction.followUp(errorReply);
           } else {

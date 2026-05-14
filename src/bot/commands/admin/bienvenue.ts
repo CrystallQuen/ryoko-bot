@@ -1,4 +1,4 @@
-import {
+﻿import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   PermissionFlagsBits,
@@ -95,7 +95,7 @@ const command: SlashCommand = {
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: 'Ephemeral' });
     } catch {
       return;
     }

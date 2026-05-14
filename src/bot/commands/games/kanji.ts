@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
+﻿import { SlashCommandBuilder, ChatInputCommandInteraction  } from 'discord.js';
 import { SlashCommand } from '../../../types';
 import {
   getSession,
@@ -35,7 +35,7 @@ const command: SlashCommand = {
         if (getSession(interaction.channelId)?.active) {
           await interaction.reply({
             content: '❌ Un quiz est déjà en cours dans ce salon ! Utilisez `/kanji stop` pour l\'arrêter.',
-            ephemeral: true,
+            flags: 'Ephemeral',
           });
           return;
         }
@@ -44,7 +44,7 @@ const command: SlashCommand = {
         if (hasOpenSetup(interaction.channelId)) {
           await interaction.reply({
             content: '❌ Un panneau de configuration est déjà ouvert dans ce salon. Cliquez sur **Démarrer** ou attendez qu\'il expire.',
-            ephemeral: true,
+            flags: 'Ephemeral',
           });
           return;
         }
@@ -67,7 +67,7 @@ const command: SlashCommand = {
       } else if (sub === 'stop') {
         const session = getSession(interaction.channelId);
         if (!session?.active) {
-          await interaction.reply({ content: '❌ Aucun quiz en cours dans ce salon.', ephemeral: true });
+          await interaction.reply({ content: '❌ Aucun quiz en cours dans ce salon.', flags: 'Ephemeral' });
           return;
         }
         session.active = false;
@@ -93,10 +93,10 @@ const command: SlashCommand = {
             '📊 Scores en cours',
             `Question ${session.current}/${session.totalQuestions} • Niveau ${session.level}`
           );
-          await interaction.reply({ embeds: [embed], ephemeral: true });
+          await interaction.reply({ embeds: [embed], flags: 'Ephemeral' });
         } else {
           // Pas de quiz actif : historique global du serveur
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: 'Ephemeral' });
           const embed = await buildHistoryEmbed(guildId);
           await interaction.editReply({ embeds: [embed] });
         }
