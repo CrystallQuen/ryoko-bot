@@ -3,18 +3,27 @@ import { SelectMenuHandler } from '../../types';
 import { getEventConfig, setEventConfig, buildEventSetupMessage } from '../modules/events/eventConfig';
 
 const handler: SelectMenuHandler = {
-  customId: /^ecfg_duration:/,
+  customId: /^ecfg_(duration|date|hour|minute):/,
 
   async execute(interaction: StringSelectMenuInteraction): Promise<void> {
-    const userId = interaction.customId.split(':')[1];
+    const parts = interaction.customId.split(':');
+    const type = parts[0].replace('ecfg_', '');
+    const userId = parts[1];
 
     if (interaction.user.id !== userId) {
       await interaction.reply({ content: '❌ Seul l\'auteur peut modifier cette configuration.', flags: 'Ephemeral' });
       return;
     }
 
-    const duration = parseFloat(interaction.values[0]);
-    setEventConfig(userId, { duration });
+    if (type === 'duration') {
+      setEventConfig(userId, { duration: parseFloat(interaction.values[0]) });
+    } else if (type === 'date') {
+      setEventConfig(userId, { selectedDate: interaction.values[0] });
+    } else if (type === 'hour') {
+      setEventConfig(userId, { selectedHour: parseInt(interaction.values[0]) });
+    } else if (type === 'minute') {
+      setEventConfig(userId, { selectedMinute: parseInt(interaction.values[0]) });
+    }
 
     await interaction.deferUpdate();
     const cfg = getEventConfig(userId);

@@ -13,7 +13,7 @@ import { ButtonHandler } from '../../types';
 import {
   getEventConfig,
   clearEventConfig,
-  parseEventDate,
+  buildScheduledAt,
   buildEventSetupMessage,
 } from '../modules/events/eventConfig';
 import { prisma } from '../../database';
@@ -50,14 +50,6 @@ const handler: ButtonHandler = {
         .setMaxLength(100)
         .setValue(cfg.titre ?? '');
 
-      const dateInput = new TextInputBuilder()
-        .setCustomId('date')
-        .setLabel('Date et heure (JJ/MM/AAAA HH:MM)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('Ex : 25/12/2025 20:00')
-        .setRequired(true)
-        .setValue(cfg.dateStr ?? '');
-
       const descInput = new TextInputBuilder()
         .setCustomId('description')
         .setLabel('Description (optionnelle)')
@@ -69,7 +61,6 @@ const handler: ButtonHandler = {
 
       modal.addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(titreInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
         new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
       );
 
@@ -88,14 +79,14 @@ const handler: ButtonHandler = {
     // ── create ───────────────────────────────────────────────────────────────
     if (action === 'create') {
       const cfg = getEventConfig(userId);
-      if (!cfg.titre || !cfg.dateStr) {
-        await interaction.reply({ content: '❌ Veuillez d\'abord saisir le titre et la date.', flags: 'Ephemeral' }).catch(() => null);
+      if (!cfg.titre || cfg.selectedDate === null || cfg.selectedHour === null || cfg.selectedMinute === null) {
+        await interaction.reply({ content: '❌ Veuillez saisir le titre et sélectionner une date/heure.', flags: 'Ephemeral' }).catch(() => null);
         return;
       }
 
-      const scheduledAt = parseEventDate(cfg.dateStr);
+      const scheduledAt = buildScheduledAt(cfg);
       if (!scheduledAt || scheduledAt <= new Date()) {
-        await interaction.reply({ content: '❌ Date invalide ou passée. Format : JJ/MM/AAAA HH:MM', flags: 'Ephemeral' }).catch(() => null);
+        await interaction.reply({ content: '❌ La date sélectionnée est déjà passée.', flags: 'Ephemeral' }).catch(() => null);
         return;
       }
 
