@@ -1,6 +1,11 @@
 import { StringSelectMenuInteraction } from 'discord.js';
 import { SelectMenuHandler } from '../../types';
-import { getPendingConfig, setPendingConfig, buildSetupMessage, type QuizLevel } from '../modules/kanji/session';
+import {
+  getPendingConfig,
+  setPendingConfig,
+  buildSetupMessage,
+  type QuizLevel,
+} from '../modules/kanji/session';
 import { logger } from '../../utils/logger';
 
 const handler: SelectMenuHandler = {
@@ -8,18 +13,27 @@ const handler: SelectMenuHandler = {
 
   async execute(interaction: StringSelectMenuInteraction): Promise<void> {
     // Format : kcfg_{type}:{channelId}:{userId}
-    const [typeWithPrefix, channelId, userId] = interaction.customId.split(':');
-    const type = typeWithPrefix.replace('kcfg_', '');
+    const parts = interaction.customId.split(':');
+    const type = parts[0].replace('kcfg_', ''); // level | questions | time
+    const channelId = parts[1];
+    const userId = parts[2];
     const key = `${channelId}:${userId}`;
     const value = interaction.values[0];
 
     if (interaction.user.id !== userId) {
       try {
-        await interaction.reply({ content: '❌ Seul l\'auteur de la commande peut configurer ce quiz.', ephemeral: true });
-      } catch { /* expirée */ }
+        await interaction.reply({
+          content: '❌ Seul l\'auteur de la commande peut configurer ce quiz.',
+          ephemeral: true,
+        });
+      } catch { /**/ }
       return;
     }
 
+    // Acquitter immédiatement pour éviter le blocage "..."
+    await interaction.deferUpdate();
+
+    // Mettre à jour la config en mémoire
     if (type === 'level') {
       setPendingConfig(key, { level: value as QuizLevel });
     } else if (type === 'questions') {
@@ -29,9 +43,12 @@ const handler: SelectMenuHandler = {
       setPendingConfig(key, { timeoutMs: ms === 0 ? null : ms });
     }
 
+    // Reconstruire et éditer le message
     const cfg = getPendingConfig(key);
+    const setup = buildSetupMessage(channelId, userId, cfg);
+
     try {
-      await interaction.update(buildSetupMessage(channelId, userId, cfg));
+      await interaction.editReply({ embeds: setup.embeds, components: setup.components as never });
     } catch (err) {
       logger.debug('Impossible de mettre à jour la config kanji', { err });
     }
