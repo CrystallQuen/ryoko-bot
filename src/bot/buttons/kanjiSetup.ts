@@ -21,46 +21,35 @@ const handler: ButtonHandler = {
     const key = `${channelId}:${userId}`;
 
     if (interaction.user.id !== userId) {
-      try {
-        await interaction.reply({ content: '❌ Seul l\'auteur de la commande peut démarrer ce quiz.', ephemeral: true });
-      } catch { /**/ }
+      await interaction.reply({ content: '❌ Seul l\'auteur peut démarrer ce quiz.', ephemeral: true }).catch(() => null);
       return;
     }
 
     if (getSession(channelId)?.active || isStarting(channelId)) {
-      try {
-        await interaction.reply({ content: '❌ Un quiz est déjà en cours dans ce salon !', ephemeral: true });
-      } catch { /**/ }
+      await interaction.reply({ content: '❌ Un quiz est déjà en cours dans ce salon !', ephemeral: true }).catch(() => null);
       return;
     }
 
+    // Verrouiller avant tout await
     lockStart(channelId);
     clearSetup(channelId);
 
-    // ── Verrou Discord : une seule instance peut acquitter cette interaction ──
-    // Si update() échoue → une autre instance l'a déjà traitée → on abandonne
+    // Acquitter l'interaction immédiatement — si ça échoue c'est qu'une autre instance a déjà répondu
     try {
-      await interaction.update({ embeds: [], components: [] });
-      await interaction.deleteReply();
+      await interaction.deferUpdate();
     } catch {
-      // Une autre instance Railway a déjà pris en charge cet événement
       unlockStart(channelId);
       return;
     }
 
-    // À ce stade, CETTE instance est la seule à avoir acquitté l'interaction
+    // Supprimer le message de configuration (erreur silencieuse)
+    await interaction.message.delete().catch(() => null);
+
     try {
       const cfg = getPendingConfig(key);
       clearPendingConfig(key);
 
-      if (getKanjiByLevel(cfg.level).length === 0) {
-        unlockStart(channelId);
-        return;
-      }
-
       const channel = interaction.channel as TextChannel;
-
-      // Créer la session avant d'unlock pour éviter tout autre race condition
       const session = createSession(channelId, userId, cfg);
       unlockStart(channelId);
 
@@ -107,7 +96,7 @@ const handler: ButtonHandler = {
       await nextQuestion(session, channel, onEnd);
     } catch (err) {
       unlockStart(channelId);
-      logger.error('Erreur au démarrage du quiz kanji', { err });
+      logger.error('Erreur démarrage quiz kanji', { err });
     }
   },
 };
