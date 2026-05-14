@@ -2,13 +2,12 @@ import 'dotenv/config';
 import { logger } from './utils/logger';
 import { connectDatabase } from './database';
 import { initializeBot } from './bot/client';
-import { createDashboard } from './dashboard/server';
 
 async function main(): Promise<void> {
   logger.info('🚀 Démarrage de Ryoko Bot...');
 
   // Vérification des variables d'environnement obligatoires
-  const required = ['DISCORD_TOKEN', 'DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET', 'DATABASE_URL', 'JWT_SECRET'];
+  const required = ['DISCORD_TOKEN', 'DISCORD_CLIENT_ID', 'DATABASE_URL'];
   const missing = required.filter((k) => !process.env[k]);
   if (missing.length > 0) {
     logger.error(`❌ Variables d'environnement manquantes : ${missing.join(', ')}`);
@@ -20,9 +19,6 @@ async function main(): Promise<void> {
 
   // Initialisation du bot Discord
   const client = await initializeBot();
-
-  // Démarrage du dashboard web
-  createDashboard(client);
 
   // Connexion Discord
   await client.login(process.env.DISCORD_TOKEN!);

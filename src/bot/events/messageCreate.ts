@@ -11,6 +11,7 @@ import {
   buildScoreEmbed,
   destroySession,
 } from '../modules/kanji/session';
+import { saveQuizStats } from '../modules/kanji/stats';
 
 const event: BotEvent = {
   name: 'messageCreate',
@@ -57,6 +58,7 @@ const event: BotEvent = {
             `${s.totalQuestions} question${s.totalQuestions > 1 ? 's' : ''} • Niveau ${s.level}`
           );
           channel.send({ embeds: [endEmbed] }).catch(() => null);
+          saveQuizStats(s).catch((err) => logger.error('saveQuizStats non catchée', { err }));
           destroySession(message.channelId);
         }
 
