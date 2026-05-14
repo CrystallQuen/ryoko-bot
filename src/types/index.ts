@@ -8,6 +8,7 @@ import {
   Client,
   ButtonInteraction,
   StringSelectMenuInteraction,
+  ModalSubmitInteraction,
 } from 'discord.js';
 
 export interface SlashCommand {
@@ -37,10 +38,16 @@ export interface SelectMenuHandler {
   execute: (interaction: StringSelectMenuInteraction) => Promise<void>;
 }
 
+export interface ModalHandler {
+  customId: string | RegExp;
+  execute: (interaction: ModalSubmitInteraction) => Promise<void>;
+}
+
 export interface ExtendedClient extends Client {
   commands: Collection<string, SlashCommand>;
   buttons: Collection<string, ButtonHandler>;
   selectMenus: Collection<string, SelectMenuHandler>;
+  modals: Collection<string, ModalHandler>;
   cooldowns: Collection<string, Collection<string, number>>;
 }
 

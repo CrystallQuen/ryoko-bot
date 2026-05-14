@@ -14,6 +14,7 @@ import { SlashCommand } from '../../../types';
 import { prisma, getOrCreateGuild } from '../../../database';
 import { isModerator } from '../../../utils/permissions';
 import { successEmbed, errorEmbed, infoEmbed } from '../../../utils/embed';
+import { getEventConfig, buildEventSetupMessage, clearEventConfig } from '../../modules/events/eventConfig';
 import { logger } from '../../../utils/logger';
 
 const command: SlashCommand = {
@@ -52,7 +53,10 @@ const command: SlashCommand = {
         .setDescription('Supprimer une animation')
         .addStringOption((o) => o.setName('id').setDescription("ID de l'événement").setRequired(true))
     )
-    .addSubcommand((sub) => sub.setName('list').setDescription('Lister les animations à venir')),
+    .addSubcommand((sub) => sub.setName('list').setDescription('Lister les animations à venir'))
+    .addSubcommand((sub) =>
+      sub.setName('creer').setDescription('Créer un événement via le panneau de configuration')
+    ),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     await interaction.deferReply({ flags: 'Ephemeral' });
@@ -78,6 +82,16 @@ const command: SlashCommand = {
         const logChannel = guild.channels.cache.get(guildData.modLogChannelId);
         if (logChannel?.isTextBased()) await logChannel.send({ embeds: [embed] }).catch(() => null);
       };
+
+      if (sub === 'creer') {
+        const userId = interaction.user.id;
+        clearEventConfig(userId);
+        const cfg = getEventConfig(userId);
+        const setup = buildEventSetupMessage(userId, cfg);
+        await interaction.editReply({ ...setup } as never);
+        setTimeout(() => clearEventConfig(userId), 10 * 60 * 1000);
+        return;
+      }
 
       if (sub === 'create') {
         const titre = interaction.options.getString('titre', true);

@@ -3,6 +3,7 @@
   ChatInputCommandInteraction,
   ButtonInteraction,
   StringSelectMenuInteraction,
+  ModalSubmitInteraction,
   Collection,
 } from 'discord.js';
 import { BotEvent, ExtendedClient } from '../../types';
@@ -91,6 +92,22 @@ const event: BotEvent = {
         await handler.execute(interaction as StringSelectMenuInteraction);
       } catch (error) {
         logger.error(`Erreur dans le menu ${interaction.customId}`, { error });
+      }
+    }
+
+    // Modals
+    if (interaction.isModalSubmit()) {
+      const handler = client.modals.find((h) => {
+        if (typeof h.customId === 'string') return h.customId === interaction.customId;
+        return h.customId.test(interaction.customId);
+      });
+
+      if (!handler) return;
+
+      try {
+        await handler.execute(interaction as ModalSubmitInteraction);
+      } catch (error) {
+        logger.error(`Erreur dans le modal ${interaction.customId}`, { error });
       }
     }
   },

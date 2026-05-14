@@ -10,6 +10,7 @@ import { loadCommands } from './loaders/commandLoader';
 import { loadEvents } from './loaders/eventLoader';
 import { loadButtons } from './loaders/buttonLoader';
 import { loadSelectMenus } from './loaders/selectMenuLoader';
+import { loadModals } from './loaders/modalLoader';
 
 export function createClient(): ExtendedClient {
   const client = new Client({
@@ -35,6 +36,7 @@ export function createClient(): ExtendedClient {
   client.commands = new Collection();
   client.buttons = new Collection();
   client.selectMenus = new Collection();
+  client.modals = new Collection();
   client.cooldowns = new Collection();
 
   return client;
@@ -51,6 +53,9 @@ export async function initializeBot(): Promise<ExtendedClient> {
 
   logger.info('🔧 Chargement des menus...');
   await loadSelectMenus(client);
+
+  logger.info('🔧 Chargement des modals...');
+  await loadModals(client);
 
   logger.info('🔧 Chargement des événements...');
   await loadEvents(client);
