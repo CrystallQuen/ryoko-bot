@@ -10,6 +10,7 @@ import {
 } from '../../modules/kanji/session';
 import { hasOpenSetup, registerSetup, clearSetup } from '../../modules/kanji/lock';
 import { saveQuizStats, buildHistoryEmbed } from '../../modules/kanji/stats';
+import { buildDictionaryEmbed } from '../../modules/kanji/dictionary';
 import { logger } from '../../../utils/logger';
 
 const command: SlashCommand = {
@@ -24,6 +25,17 @@ const command: SlashCommand = {
     )
     .addSubcommand((sub) =>
       sub.setName('score').setDescription('Voir le tableau des scores de la partie en cours')
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('info')
+        .setDescription('Rechercher les informations sur un kanji')
+        .addStringOption((opt) =>
+          opt
+            .setName('kanji')
+            .setDescription('Le kanji à rechercher (un seul caractère)')
+            .setRequired(true)
+        )
     ),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -100,9 +112,25 @@ const command: SlashCommand = {
           const embed = await buildHistoryEmbed(guildId);
           await interaction.editReply({ embeds: [embed] });
         }
+      } else if (sub === 'info') {
+        const kanji = interaction.options.getString('kanji', true).trim();
+        if ([...kanji].length !== 1) {
+          await interaction.reply({ content: '❌ Veuillez entrer un seul caractère kanji.', flags: 'Ephemeral' });
+          return;
+        }
+        await interaction.deferReply();
+        const embed = await buildDictionaryEmbed(kanji);
+        if (!embed) {
+          await interaction.editReply({ content: `❌ Kanji **${kanji}** introuvable. Vérifiez que c'est bien un kanji valide.` });
+          return;
+        }
+        await interaction.editReply({ embeds: [embed] });
       }
     } catch (err) {
-      logger.debug('Erreur interaction /kanji', { err });
+      logger.error('Erreur interaction /kanji', { err });
+      if (interaction.deferred) {
+        await interaction.editReply({ content: '❌ Une erreur est survenue.' }).catch(() => null);
+      }
     }
   },
 };
