@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import type { Event, Channel, Role } from '../api/client';
 import { Calendar, Plus, Trash2, Clock, Volume2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import CalendarPicker from '../components/CalendarPicker';
 
 interface VoiceChannel {
   id: string;
@@ -23,10 +24,10 @@ export default function Events() {
     description: '',
     channelId: '',
     voiceChannelId: '',
-    scheduledAt: '',
     roleId: '',
     duration: '2',
   });
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -46,21 +47,23 @@ export default function Events() {
   }, [guildId]);
 
   const handleCreate = async () => {
-    if (!guildId || !form.title || !form.channelId || !form.scheduledAt) {
-      return toast.error('Remplissez les champs obligatoires');
+    if (!guildId || !form.title || !form.channelId || !selectedDate) {
+      return toast.error('Remplissez les champs obligatoires (titre, salon, date)');
+    }
+    if (selectedDate <= new Date()) {
+      return toast.error('La date doit être dans le futur');
     }
     setCreating(true);
     try {
-      // Convertit l'heure locale du navigateur en ISO UTC
-      const isoDate = new Date(form.scheduledAt).toISOString();
       const res = await api.post<Event>(`/guilds/${guildId}/events`, {
         ...form,
-        scheduledAt: isoDate,
+        scheduledAt: selectedDate.toISOString(),
         voiceChannelId: form.voiceChannelId || null,
         roleId: form.roleId || null,
       });
       setEvents([...events, res.data].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()));
-      setForm({ title: '', description: '', channelId: '', voiceChannelId: '', scheduledAt: '', roleId: '', duration: '2' });
+      setForm({ title: '', description: '', channelId: '', voiceChannelId: '', roleId: '', duration: '2' });
+      setSelectedDate(null);
       toast.success('Événement créé et annoncé dans Discord !');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? 'Erreur';
@@ -117,14 +120,8 @@ export default function Events() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">📅 Date et heure *</label>
-              <input
-                type="datetime-local"
-                value={form.scheduledAt}
-                onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
-                min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
-                className="input"
-              />
+              <label className="block text-sm text-gray-400 mb-2">📅 Date et heure *</label>
+              <CalendarPicker value={selectedDate} onChange={setSelectedDate} />
             </div>
 
             <div>
