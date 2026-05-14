@@ -37,10 +37,19 @@ export function clearEventConfig(key: string): void {
   pendingConfigs.delete(key);
 }
 
+function fromParisTime(year: number, month: number, day: number, hour: number, minute: number): Date {
+  // Crée un timestamp UTC correspondant à l'heure locale Europe/Paris saisie
+  const naive = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const utcStr = naive.toLocaleString('en-US', { timeZone: 'UTC' });
+  const parisStr = naive.toLocaleString('en-US', { timeZone: 'Europe/Paris' });
+  const offsetMs = new Date(utcStr).getTime() - new Date(parisStr).getTime();
+  return new Date(naive.getTime() + offsetMs);
+}
+
 export function buildScheduledAt(cfg: PendingEventConfig): Date | null {
   if (!cfg.selectedDate || cfg.selectedHour === null || cfg.selectedMinute === null) return null;
   const [y, m, d] = cfg.selectedDate.split('-').map(Number);
-  return new Date(y, m - 1, d, cfg.selectedHour, cfg.selectedMinute);
+  return fromParisTime(y, m, d, cfg.selectedHour, cfg.selectedMinute);
 }
 
 const DAY_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
@@ -87,7 +96,7 @@ export function buildEventSetupMessage(userId: string, cfg: PendingEventConfig):
   // Date select — 25 prochains jours
   const today = new Date();
   const dateOptions: StringSelectMenuOptionBuilder[] = [];
-  for (let i = 1; i <= 25; i++) {
+  for (let i = 0; i <= 24; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     const val = toDateKey(d);
