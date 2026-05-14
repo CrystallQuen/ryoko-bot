@@ -37,7 +37,7 @@ const handler: ModalHandler = {
     const setup = buildEventSetupMessage(userId, cfg);
 
     await interaction.deferUpdate();
-    await interaction.message?.edit({ embeds: setup.embeds, components: setup.components as never }).catch(() => null);
+    await interaction.editReply({ embeds: setup.embeds, components: setup.components as never }).catch(() => null);
   },
 };
 
