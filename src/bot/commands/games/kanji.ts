@@ -1,6 +1,14 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from 'discord.js';
 import { SlashCommand } from '../../../types';
-import { getSession, destroySession, buildScoreEmbed, buildSetupMessage, getPendingConfig } from '../../modules/kanji/session';
+import {
+  getSession,
+  destroySession,
+  buildScoreEmbed,
+  buildSetupMessage,
+  getPendingConfig,
+  clearPendingConfig,
+} from '../../modules/kanji/session';
+import { hasOpenSetup, registerSetup, clearSetup } from '../../modules/kanji/lock';
 import { logger } from '../../../utils/logger';
 
 const command: SlashCommand = {
@@ -19,13 +27,38 @@ const command: SlashCommand = {
 
     try {
       if (sub === 'start') {
+        // Quiz déjà actif
         if (getSession(interaction.channelId)?.active) {
-          await interaction.reply({ content: '❌ Un quiz est déjà en cours ! Utilisez `/kanji stop` pour l\'arrêter.', ephemeral: true });
+          await interaction.reply({
+            content: '❌ Un quiz est déjà en cours dans ce salon ! Utilisez `/kanji stop` pour l\'arrêter.',
+            ephemeral: true,
+          });
           return;
         }
+
+        // Panneau de configuration déjà ouvert — on le refuse pour éviter les doublons
+        if (hasOpenSetup(interaction.channelId)) {
+          await interaction.reply({
+            content: '❌ Un panneau de configuration est déjà ouvert dans ce salon. Cliquez sur **Démarrer** ou attendez qu\'il expire.',
+            ephemeral: true,
+          });
+          return;
+        }
+
         const key = `${interaction.channelId}:${interaction.user.id}`;
         const cfg = getPendingConfig(key);
-        await interaction.reply(buildSetupMessage(interaction.channelId, interaction.user.id, cfg));
+        const setup = buildSetupMessage(interaction.channelId, interaction.user.id, cfg);
+
+        await interaction.reply(setup);
+
+        // Enregistrer que ce salon a un setup ouvert
+        registerSetup(interaction.channelId);
+
+        // Auto-nettoyage après 5 minutes si personne n'a cliqué Démarrer
+        setTimeout(() => {
+          clearSetup(interaction.channelId);
+          clearPendingConfig(key);
+        }, 5 * 60 * 1000);
 
       } else if (sub === 'stop') {
         const session = getSession(interaction.channelId);
@@ -34,7 +67,11 @@ const command: SlashCommand = {
           return;
         }
         session.active = false;
-        const embed = buildScoreEmbed(session, '⛔ Quiz arrêté — Tableau des scores', `Arrêté à la question ${session.current}/${session.totalQuestions}`);
+        const embed = buildScoreEmbed(
+          session,
+          '⛔ Quiz arrêté — Tableau des scores',
+          `Arrêté à la question ${session.current}/${session.totalQuestions}`
+        );
         destroySession(interaction.channelId);
         await interaction.reply({ embeds: [embed] });
         logger.info('Quiz kanji arrêté manuellement', { channelId: interaction.channelId });

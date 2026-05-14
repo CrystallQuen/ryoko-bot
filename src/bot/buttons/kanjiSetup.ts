@@ -9,11 +9,15 @@ import {
   getPendingConfig,
   clearPendingConfig,
 } from '../modules/kanji/session';
+import {
+  hasOpenSetup,
+  clearSetup,
+  isStarting,
+  lockStart,
+  unlockStart,
+} from '../modules/kanji/lock';
 import { getKanjiByLevel } from '../modules/kanji/data';
 import { logger } from '../../utils/logger';
-
-// Verrou en mémoire pour éviter le double déclenchement
-const starting = new Set<string>();
 
 const handler: ButtonHandler = {
   customId: /^kcfg_start:/,
@@ -23,20 +27,26 @@ const handler: ButtonHandler = {
     const key = `${channelId}:${userId}`;
 
     if (interaction.user.id !== userId) {
-      try { await interaction.reply({ content: '❌ Seul l\'auteur de la commande peut démarrer ce quiz.', ephemeral: true }); } catch { /**/ }
+      try {
+        await interaction.reply({ content: '❌ Seul l\'auteur de la commande peut démarrer ce quiz.', ephemeral: true });
+      } catch { /**/ }
       return;
     }
 
-    // Double-clic ou double instance — on refuse silencieusement
-    if (getSession(channelId)?.active || starting.has(channelId)) {
-      try { await interaction.reply({ content: '❌ Un quiz est déjà en cours dans ce salon !', ephemeral: true }); } catch { /**/ }
+    // Verrous synchrones — aucun await avant cette section
+    if (getSession(channelId)?.active || isStarting(channelId)) {
+      try {
+        await interaction.reply({ content: '❌ Un quiz est déjà en cours dans ce salon !', ephemeral: true });
+      } catch { /**/ }
       return;
     }
 
-    // Verrouiller immédiatement + supprimer le message de config en une seule opération
-    // pour qu'un second clic ne puisse plus passer
-    starting.add(channelId);
+    // Verrouiller immédiatement (synchrone) avant tout await
+    lockStart(channelId);
+    clearSetup(channelId);
+
     try {
+      // Acquitter l'interaction ET supprimer le message en une seule opération
       await interaction.update({ embeds: [], components: [] });
       await interaction.deleteReply();
     } catch { /**/ }
@@ -46,19 +56,26 @@ const handler: ButtonHandler = {
       clearPendingConfig(key);
 
       if (getKanjiByLevel(cfg.level).length === 0) {
-        starting.delete(channelId);
+        unlockStart(channelId);
         return;
       }
 
       const channel = interaction.channel as TextChannel;
+
+      // Créer la session AVANT d'envoyer quoi que ce soit
       const session = createSession(channelId, userId, cfg);
+
+      // Le verrou de démarrage peut maintenant être libéré — la session protège désormais
+      unlockStart(channelId);
 
       const levelLabel: Record<string, string> = {
         N5: 'N5 — Débutant 🌱',
         N4: 'N4 — Élémentaire 📗',
         N3: 'N3 — Intermédiaire 📘',
       };
-      const timeLabel = cfg.timeoutMs === null ? '♾️ Illimité' : `⏱️ ${cfg.timeoutMs / 1000}s par question`;
+      const timeLabel = cfg.timeoutMs === null
+        ? '♾️ Illimité'
+        : `⏱️ ${cfg.timeoutMs / 1000}s par question`;
 
       await channel.send({
         embeds: [
@@ -92,8 +109,9 @@ const handler: ButtonHandler = {
       }
 
       await nextQuestion(session, channel, onEnd);
-    } finally {
-      starting.delete(channelId);
+    } catch (err) {
+      unlockStart(channelId);
+      logger.error('Erreur au démarrage du quiz kanji', { err });
     }
   },
 };
