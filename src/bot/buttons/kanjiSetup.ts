@@ -9,13 +9,7 @@ import {
   getPendingConfig,
   clearPendingConfig,
 } from '../modules/kanji/session';
-import {
-  hasOpenSetup,
-  clearSetup,
-  isStarting,
-  lockStart,
-  unlockStart,
-} from '../modules/kanji/lock';
+import { clearSetup, isStarting, lockStart, unlockStart } from '../modules/kanji/lock';
 import { getKanjiByLevel } from '../modules/kanji/data';
 import { logger } from '../../utils/logger';
 
@@ -33,7 +27,6 @@ const handler: ButtonHandler = {
       return;
     }
 
-    // Verrous synchrones — aucun await avant cette section
     if (getSession(channelId)?.active || isStarting(channelId)) {
       try {
         await interaction.reply({ content: '❌ Un quiz est déjà en cours dans ce salon !', ephemeral: true });
@@ -41,16 +34,21 @@ const handler: ButtonHandler = {
       return;
     }
 
-    // Verrouiller immédiatement (synchrone) avant tout await
     lockStart(channelId);
     clearSetup(channelId);
 
+    // ── Verrou Discord : une seule instance peut acquitter cette interaction ──
+    // Si update() échoue → une autre instance l'a déjà traitée → on abandonne
     try {
-      // Acquitter l'interaction ET supprimer le message en une seule opération
       await interaction.update({ embeds: [], components: [] });
       await interaction.deleteReply();
-    } catch { /**/ }
+    } catch {
+      // Une autre instance Railway a déjà pris en charge cet événement
+      unlockStart(channelId);
+      return;
+    }
 
+    // À ce stade, CETTE instance est la seule à avoir acquitté l'interaction
     try {
       const cfg = getPendingConfig(key);
       clearPendingConfig(key);
@@ -62,10 +60,8 @@ const handler: ButtonHandler = {
 
       const channel = interaction.channel as TextChannel;
 
-      // Créer la session AVANT d'envoyer quoi que ce soit
+      // Créer la session avant d'unlock pour éviter tout autre race condition
       const session = createSession(channelId, userId, cfg);
-
-      // Le verrou de démarrage peut maintenant être libéré — la session protège désormais
       unlockStart(channelId);
 
       const levelLabel: Record<string, string> = {
