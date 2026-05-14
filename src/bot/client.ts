@@ -9,6 +9,7 @@ import { logger } from '../utils/logger';
 import { loadCommands } from './loaders/commandLoader';
 import { loadEvents } from './loaders/eventLoader';
 import { loadButtons } from './loaders/buttonLoader';
+import { loadSelectMenus } from './loaders/selectMenuLoader';
 
 export function createClient(): ExtendedClient {
   const client = new Client({
@@ -47,6 +48,9 @@ export async function initializeBot(): Promise<ExtendedClient> {
 
   logger.info('🔧 Chargement des boutons...');
   await loadButtons(client);
+
+  logger.info('🔧 Chargement des menus...');
+  await loadSelectMenus(client);
 
   logger.info('🔧 Chargement des événements...');
   await loadEvents(client);
