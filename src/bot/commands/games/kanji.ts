@@ -20,7 +20,7 @@ import { getKanjiByLevel } from '../../modules/kanji/data';
 const command: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('kanji')
-    .setDescription('Quiz de kanji japonais (style Kotoba)')
+    .setDescription('Quiz de kanji japonais (style Kotoba) — répondez via les boutons !')
     .addSubcommand((sub) =>
       sub
         .setName('start')
@@ -66,13 +66,9 @@ const command: SlashCommand = {
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const sub = interaction.options.getSubcommand();
 
-    if (sub === 'start') {
-      await handleStart(interaction);
-    } else if (sub === 'stop') {
-      await handleStop(interaction);
-    } else if (sub === 'score') {
-      await handleScore(interaction);
-    }
+    if (sub === 'start') await handleStart(interaction);
+    else if (sub === 'stop') await handleStop(interaction);
+    else if (sub === 'score') await handleScore(interaction);
   },
 };
 
@@ -92,9 +88,9 @@ async function handleStart(interaction: ChatInputCommandInteraction): Promise<vo
   const total = interaction.options.getInteger('questions') ?? 10;
 
   const pool = getKanjiByLevel(level);
-  if (pool.length < total) {
+  if (pool.length < 4) {
     await interaction.reply({
-      content: `❌ Pas assez de kanji pour ce niveau (${pool.length} disponibles, ${total} demandés).`,
+      content: `❌ Pas assez de kanji pour ce niveau (minimum 4 requis).`,
       ephemeral: true,
     });
     return;
@@ -119,7 +115,7 @@ async function handleStart(interaction: ChatInputCommandInteraction): Promise<vo
         `**Mode :** ${modeLabel}\n` +
         `**Questions :** ${total}\n` +
         `**Temps par question :** ${ANSWER_TIMEOUT_MS / 1000}s\n\n` +
-        `Tapez votre réponse directement dans le chat !\n` +
+        `Cliquez sur le bouton correspondant à la bonne réponse !\n` +
         `La première bonne réponse rapporte **1 point** 🏆`
     )
     .setFooter({ text: `Quiz démarré par ${interaction.user.displayName}` })
@@ -131,11 +127,10 @@ async function handleStart(interaction: ChatInputCommandInteraction): Promise<vo
     const s = getSession(channelId);
     if (!s) return;
     s.active = false;
-
     const endEmbed = buildScoreEmbed(
       s,
       '🏁 Quiz terminé !',
-      `${s.current - 1} question${s.current - 1 > 1 ? 's' : ''} posée${s.current - 1 > 1 ? 's' : ''}`
+      `${s.totalQuestions} question${s.totalQuestions > 1 ? 's' : ''} posée${s.totalQuestions > 1 ? 's' : ''}`
     );
     channel.send({ embeds: [endEmbed] }).catch(() => null);
     destroySession(channelId);
