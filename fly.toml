@@ -11,5 +11,5 @@ primary_region = 'cdg'
   cpu_kind = 'shared'
   cpus = 1
 
-[restart]
+[[restart]]
   policy = 'always'
