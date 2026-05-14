@@ -82,7 +82,7 @@ export function createDashboard(client: Client): { app: express.Application; io:
   app.use('/api/guilds', authMiddleware, moderationRouter);
   app.use('/api/guilds', authMiddleware, welcomeRouter);
   app.use('/api/guilds', authMiddleware, rolesRouter);
-  app.use('/api/guilds', authMiddleware, eventsRouter);
+  app.use('/api/guilds', authMiddleware, eventsRouter(client));
   app.use('/api/guilds', authMiddleware, gamesRouter);
   app.use('/api/guilds', authMiddleware, settingsRouter);
 

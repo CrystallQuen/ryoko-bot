@@ -99,6 +99,20 @@ export function guildsRouter(client: Client): Router {
     res.json(channels);
   });
 
+  // Liste des salons vocaux d'un serveur
+  router.get('/:guildId/voice-channels', async (req, res: Response) => {
+    const { guildId } = req.params;
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) return res.status(404).json({ error: 'Serveur introuvable' });
+
+    const channels = guild.channels.cache
+      .filter((c) => c.type === 2 || c.type === 13) // GuildVoice | GuildStageVoice
+      .sort((a, b) => (a as { rawPosition: number }).rawPosition - (b as { rawPosition: number }).rawPosition)
+      .map((c) => ({ id: c.id, name: (c as { name: string }).name, type: c.type }));
+
+    res.json(channels);
+  });
+
   // Liste des rôles d'un serveur
   router.get('/:guildId/roles', async (req, res: Response) => {
     const { guildId } = req.params;

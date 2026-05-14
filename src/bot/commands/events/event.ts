@@ -4,12 +4,14 @@
   PermissionFlagsBits,
   GuildMember,
   EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } from 'discord.js';
 import { SlashCommand } from '../../../types';
 import { prisma, getOrCreateGuild } from '../../../database';
 import { isModerator } from '../../../utils/permissions';
 import { successEmbed, errorEmbed, infoEmbed } from '../../../utils/embed';
-import { getEventConfig, buildEventSetupMessage, clearEventConfig } from '../../modules/events/eventConfig';
 import { logger } from '../../../utils/logger';
 
 const command: SlashCommand = {
@@ -54,12 +56,18 @@ const command: SlashCommand = {
       };
 
       if (sub === 'creer') {
-        const userId = interaction.user.id;
-        clearEventConfig(userId);
-        const cfg = getEventConfig(userId);
-        const setup = buildEventSetupMessage(userId, cfg);
-        await interaction.editReply({ ...setup } as never);
-        setTimeout(() => clearEventConfig(userId), 10 * 60 * 1000);
+        const dashboardUrl = process.env.DASHBOARD_URL ?? 'https://ryoko-bot.up.railway.app';
+        const url = `${dashboardUrl}/dashboard/${guild.id}/events`;
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setLabel('📅 Ouvrir le calendrier')
+            .setStyle(ButtonStyle.Link)
+            .setURL(url)
+        );
+        await interaction.editReply({
+          embeds: [infoEmbed('Créer un événement', `Cliquez sur le bouton ci-dessous pour créer un événement.\nVous aurez accès à un **vrai calendrier** avec sélection du salon vocal.`)],
+          components: [row as never],
+        });
         return;
       }
 
