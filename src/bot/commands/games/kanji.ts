@@ -9,6 +9,7 @@ import {
   clearPendingConfig,
 } from '../../modules/kanji/session';
 import { hasOpenSetup, registerSetup, clearSetup } from '../../modules/kanji/lock';
+import { saveQuizStats, buildHistoryEmbed } from '../../modules/kanji/stats';
 import { logger } from '../../../utils/logger';
 
 const command: SlashCommand = {
@@ -75,22 +76,30 @@ const command: SlashCommand = {
           '⛔ Quiz arrêté — Tableau des scores',
           `Arrêté à la question ${session.current}/${session.totalQuestions}`
         );
+        await saveQuizStats(session);
         destroySession(interaction.channelId);
         await interaction.reply({ embeds: [embed] });
         logger.info('Quiz kanji arrêté manuellement', { channelId: interaction.channelId });
 
       } else if (sub === 'score') {
+        const guildId = interaction.guildId;
+        if (!guildId) return;
+
         const session = getSession(interaction.channelId);
-        if (!session?.active) {
-          await interaction.reply({ content: '❌ Aucun quiz en cours dans ce salon.', ephemeral: true });
-          return;
+        if (session?.active) {
+          // Quiz en cours : scores de la partie actuelle
+          const embed = buildScoreEmbed(
+            session,
+            '📊 Scores en cours',
+            `Question ${session.current}/${session.totalQuestions} • Niveau ${session.level}`
+          );
+          await interaction.reply({ embeds: [embed], ephemeral: true });
+        } else {
+          // Pas de quiz actif : historique global du serveur
+          await interaction.deferReply({ ephemeral: true });
+          const embed = await buildHistoryEmbed(guildId);
+          await interaction.editReply({ embeds: [embed] });
         }
-        const embed = buildScoreEmbed(
-          session,
-          '📊 Scores en cours',
-          `Question ${session.current}/${session.totalQuestions} • Niveau ${session.level}`
-        );
-        await interaction.reply({ embeds: [embed], ephemeral: true });
       }
     } catch (err) {
       logger.debug('Erreur interaction /kanji', { err });

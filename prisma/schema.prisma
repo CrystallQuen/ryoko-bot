@@ -42,6 +42,7 @@ model Guild {
   gameSessions     GameSession[]
   antiSpamConfig   AntiSpamConfig?
   userEconomy      UserEconomy[]
+  kanjiStats       KanjiStat[]
 }
 
 model Sanction {
@@ -201,6 +202,20 @@ model UserEconomy {
   guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@unique([guildId, userId])
+}
+
+model KanjiStat {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  correct   Int      @default(0)
+  played    Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  guild     Guild    @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+  @@index([guildId, correct])
 }
 
 model DashboardSession {

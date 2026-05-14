@@ -118,6 +118,7 @@ export interface KanjiSession {
   scores: Record<string, number>;
   usedKanji: Set<string>;
   channelId: string;
+  guildId: string;
   startedBy: string;
   startedAt: Date;
   timeoutMs: number | null;
@@ -133,6 +134,7 @@ export function getSession(channelId: string): KanjiSession | undefined {
 
 export function createSession(
   channelId: string,
+  guildId: string,
   startedBy: string,
   cfg: PendingConfig
 ): KanjiSession {
@@ -146,6 +148,7 @@ export function createSession(
     scores: {},
     usedKanji: new Set(),
     channelId,
+    guildId,
     startedBy,
     startedAt: new Date(),
     timeoutMs: cfg.timeoutMs,

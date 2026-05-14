@@ -11,6 +11,7 @@ import {
 } from '../modules/kanji/session';
 import { clearSetup, isStarting, lockStart, unlockStart } from '../modules/kanji/lock';
 import { getKanjiByLevel } from '../modules/kanji/data';
+import { saveQuizStats } from '../modules/kanji/stats';
 import { logger } from '../../utils/logger';
 
 const handler: ButtonHandler = {
@@ -50,7 +51,8 @@ const handler: ButtonHandler = {
       clearPendingConfig(key);
 
       const channel = interaction.channel as TextChannel;
-      const session = createSession(channelId, userId, cfg);
+      const guildId = interaction.guildId ?? channelId;
+      const session = createSession(channelId, guildId, userId, cfg);
       unlockStart(channelId);
 
       const levelLabel: Record<string, string> = {
@@ -89,6 +91,7 @@ const handler: ButtonHandler = {
           `${s.totalQuestions} question${s.totalQuestions > 1 ? 's' : ''} • Niveau ${cfg.level}`
         );
         channel.send({ embeds: [endEmbed] }).catch(() => null);
+        saveQuizStats(s).catch(() => null);
         destroySession(channelId);
         logger.info('Quiz kanji terminé', { channelId, scores: s.scores });
       }
