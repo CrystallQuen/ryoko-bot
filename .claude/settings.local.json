@@ -18,7 +18,8 @@
       "Bash(npx ts-node *)",
       "Bash(netstat -ano)",
       "Bash(findstr \":4000\")",
-      "Bash(taskkill /PID 16440 /F)"
+      "Bash(taskkill /PID 16440 /F)",
+      "PowerShell(Stop-Process -Id 24956 -Force)"
     ]
   }
 }
