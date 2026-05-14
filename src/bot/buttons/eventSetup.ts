@@ -12,6 +12,7 @@ import {
 import { ButtonHandler } from '../../types';
 import {
   getEventConfig,
+  setEventConfig,
   clearEventConfig,
   buildScheduledAt,
   buildEventSetupMessage,
@@ -21,15 +22,42 @@ import { successEmbed, errorEmbed } from '../../utils/embed';
 import { logger } from '../../utils/logger';
 
 const handler: ButtonHandler = {
-  customId: /^ecfg_(info|create|cancel):/,
+  customId: /^ecfg_(info|create|cancel|cal_prev|cal_next|day_\d{4}-\d{2}-\d{2}):/,
 
   async execute(interaction: ButtonInteraction): Promise<void> {
     const parts = interaction.customId.split(':');
-    const action = parts[0].replace('ecfg_', '');
+    const rawAction = parts[0].replace('ecfg_', '');
     const userId = parts[1];
+
+    const action = rawAction.startsWith('day_') ? 'day' : rawAction;
+    const dayDate = rawAction.startsWith('day_') ? rawAction.replace('day_', '') : null;
 
     if (interaction.user.id !== userId) {
       await interaction.reply({ content: '❌ Seul l\'auteur peut modifier cette configuration.', flags: 'Ephemeral' }).catch(() => null);
+      return;
+    }
+
+    // ── navigation calendrier ────────────────────────────────────────────────
+    if (action === 'cal_prev' || action === 'cal_next') {
+      const cfg = getEventConfig(userId);
+      const newOffset = action === 'cal_prev'
+        ? Math.max(0, cfg.weekOffset - 1)
+        : cfg.weekOffset + 1;
+      setEventConfig(userId, { weekOffset: newOffset });
+      await interaction.deferUpdate();
+      const updated = getEventConfig(userId);
+      const setup = buildEventSetupMessage(userId, updated);
+      await interaction.editReply({ embeds: setup.embeds, components: setup.components as never });
+      return;
+    }
+
+    // ── sélection d'un jour ──────────────────────────────────────────────────
+    if (action === 'day' && dayDate) {
+      setEventConfig(userId, { selectedDate: dayDate });
+      await interaction.deferUpdate();
+      const cfg = getEventConfig(userId);
+      const setup = buildEventSetupMessage(userId, cfg);
+      await interaction.editReply({ embeds: setup.embeds, components: setup.components as never });
       return;
     }
 

@@ -3,7 +3,7 @@ import { SelectMenuHandler } from '../../types';
 import { getEventConfig, setEventConfig, buildEventSetupMessage } from '../modules/events/eventConfig';
 
 const handler: SelectMenuHandler = {
-  customId: /^ecfg_(duration|date|hour|minute):/,
+  customId: /^ecfg_(hour|minute):/,
 
   async execute(interaction: StringSelectMenuInteraction): Promise<void> {
     const parts = interaction.customId.split(':');
@@ -15,11 +15,7 @@ const handler: SelectMenuHandler = {
       return;
     }
 
-    if (type === 'duration') {
-      setEventConfig(userId, { duration: parseFloat(interaction.values[0]) });
-    } else if (type === 'date') {
-      setEventConfig(userId, { selectedDate: interaction.values[0] });
-    } else if (type === 'hour') {
+    if (type === 'hour') {
       setEventConfig(userId, { selectedHour: parseInt(interaction.values[0]) });
     } else if (type === 'minute') {
       setEventConfig(userId, { selectedMinute: parseInt(interaction.values[0]) });

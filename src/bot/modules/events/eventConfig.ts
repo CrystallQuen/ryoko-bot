@@ -13,6 +13,7 @@ export interface PendingEventConfig {
   selectedDate: string | null; // "YYYY-MM-DD"
   selectedHour: number | null; // 0-23
   selectedMinute: number | null; // 0, 15, 30, 45
+  weekOffset: number; // semaines depuis la semaine courante
   duration: number; // heures
 }
 
@@ -25,6 +26,7 @@ export function getEventConfig(key: string): PendingEventConfig {
     selectedDate: null,
     selectedHour: null,
     selectedMinute: null,
+    weekOffset: 0,
     duration: 2,
   };
 }
@@ -38,7 +40,6 @@ export function clearEventConfig(key: string): void {
 }
 
 function fromParisTime(year: number, month: number, day: number, hour: number, minute: number): Date {
-  // Crée un timestamp UTC correspondant à l'heure locale Europe/Paris saisie
   const naive = new Date(Date.UTC(year, month - 1, day, hour, minute));
   const utcStr = naive.toLocaleString('en-US', { timeZone: 'UTC' });
   const parisStr = naive.toLocaleString('en-US', { timeZone: 'Europe/Paris' });
@@ -52,15 +53,21 @@ export function buildScheduledAt(cfg: PendingEventConfig): Date | null {
   return fromParisTime(y, m, d, cfg.selectedHour, cfg.selectedMinute);
 }
 
-const DAY_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+const DAY_SHORT = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-
-function formatDateLabel(date: Date): string {
-  return `${DAY_LABELS[date.getDay()]} ${date.getDate()} ${MONTH_LABELS[date.getMonth()]} ${date.getFullYear()}`;
-}
+const MONTH_FULL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 
 function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getMondayOfCurrentWeek(): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dow = today.getDay(); // 0=Dim
+  const diff = dow === 0 ? -6 : 1 - dow;
+  today.setDate(today.getDate() + diff);
+  return today;
 }
 
 export function buildEventSetupMessage(userId: string, cfg: PendingEventConfig): {
@@ -68,18 +75,33 @@ export function buildEventSetupMessage(userId: string, cfg: PendingEventConfig):
   components: ActionRowBuilder<ButtonBuilder | StringSelectMenuBuilder>[];
 } {
   const scheduledAt = buildScheduledAt(cfg);
+  const now = new Date();
 
+  // ── Semaine affichée ─────────────────────────────────────────────────────
+  const monday = getMondayOfCurrentWeek();
+  monday.setDate(monday.getDate() + cfg.weekOffset * 7);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const weekLabel =
+    monday.getMonth() === sunday.getMonth()
+      ? `${monday.getDate()} – ${sunday.getDate()} ${MONTH_FULL[monday.getMonth()]} ${sunday.getFullYear()}`
+      : `${monday.getDate()} ${MONTH_LABELS[monday.getMonth()]} – ${sunday.getDate()} ${MONTH_LABELS[sunday.getMonth()]} ${sunday.getFullYear()}`;
+
+  // ── Valeurs affichées ────────────────────────────────────────────────────
   const titreVal = cfg.titre ?? '*(non défini)*';
   let dateVal = '*(non définie)*';
   if (cfg.selectedDate && cfg.selectedHour !== null && cfg.selectedMinute !== null) {
     const [y, m, d] = cfg.selectedDate.split('-').map(Number);
     const h = String(cfg.selectedHour).padStart(2, '0');
     const min = String(cfg.selectedMinute).padStart(2, '0');
-    dateVal = `${formatDateLabel(new Date(y, m - 1, d))} à ${h}:${min}`;
+    const dayObj = new Date(y, m - 1, d);
+    dateVal = `${DAY_SHORT[dayObj.getDay()]} ${dayObj.getDate()} ${MONTH_LABELS[m - 1]} ${y} à ${h}:${min}`;
   }
   const descVal = cfg.description || '*(aucune)*';
   const dureeLabel = cfg.duration < 1 ? '30 minutes' : `${cfg.duration}h`;
-  const pret = cfg.titre !== null && scheduledAt !== null && scheduledAt > new Date();
+  const pret = cfg.titre !== null && scheduledAt !== null && scheduledAt > now;
 
   const embed = new EmbedBuilder()
     .setColor('#5865F2')
@@ -89,30 +111,59 @@ export function buildEventSetupMessage(userId: string, cfg: PendingEventConfig):
       `**Date :** ${dateVal}\n` +
       `**Description :** ${descVal}\n` +
       `**Durée :** ${dureeLabel}\n\n` +
-      `Sélectionnez la date et l'heure ci-dessous, puis cliquez sur **📝 Informations** pour le titre.\n` +
-      `Cliquez sur **Créer** quand tout est prêt !`
+      `📅 **${weekLabel}**\n` +
+      `Choisissez un jour ci-dessous, puis l'heure. Cliquez sur **📝 Informations** pour le titre.`
     );
 
-  // Date select — 25 prochains jours
-  const today = new Date();
-  const dateOptions: StringSelectMenuOptionBuilder[] = [];
-  for (let i = 0; i <= 24; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    const val = toDateKey(d);
-    dateOptions.push(
-      new StringSelectMenuOptionBuilder()
-        .setLabel(formatDateLabel(d))
-        .setValue(val)
-        .setDefault(cfg.selectedDate === val)
+  // ── Boutons jours ────────────────────────────────────────────────────────
+  const prevDisabled = cfg.weekOffset <= 0;
+
+  const prevBtn = new ButtonBuilder()
+    .setCustomId(`ecfg_cal_prev:${userId}`)
+    .setLabel('◀')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(prevDisabled);
+
+  const nextBtn = new ButtonBuilder()
+    .setCustomId(`ecfg_cal_next:${userId}`)
+    .setLabel('▶')
+    .setStyle(ButtonStyle.Secondary);
+
+  const dayButtons: ButtonBuilder[] = [];
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    const dateKey = toDateKey(day);
+    const isSelected = cfg.selectedDate === dateKey;
+    const isPast = day < now && day.toDateString() !== now.toDateString();
+
+    dayButtons.push(
+      new ButtonBuilder()
+        .setCustomId(`ecfg_day_${dateKey}:${userId}`)
+        .setLabel(`${DAY_SHORT[day.getDay()]} ${day.getDate()}`)
+        .setStyle(isSelected ? ButtonStyle.Primary : ButtonStyle.Secondary)
+        .setDisabled(isPast)
     );
   }
-  const dateMenu = new StringSelectMenuBuilder()
-    .setCustomId(`ecfg_date:${userId}`)
-    .setPlaceholder('📅 Sélectionner une date')
-    .addOptions(dateOptions);
 
-  // Heure select — 00h à 23h
+  // Row 1 : ◀ + Lun Mar Mer Jeu (Mon–Thu)
+  const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    prevBtn,
+    dayButtons[0], // Lun
+    dayButtons[1], // Mar
+    dayButtons[2], // Mer
+    dayButtons[3], // Jeu
+  );
+
+  // Row 2 : Ven Sam Dim + ▶
+  const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    dayButtons[4], // Ven
+    dayButtons[5], // Sam
+    dayButtons[6], // Dim
+    nextBtn,
+  );
+
+  // ── Heure ────────────────────────────────────────────────────────────────
   const hourOptions: StringSelectMenuOptionBuilder[] = [];
   for (let h = 0; h < 24; h++) {
     hourOptions.push(
@@ -127,7 +178,7 @@ export function buildEventSetupMessage(userId: string, cfg: PendingEventConfig):
     .setPlaceholder('🕐 Heure')
     .addOptions(hourOptions);
 
-  // Minutes select
+  // ── Minutes ──────────────────────────────────────────────────────────────
   const minuteMenu = new StringSelectMenuBuilder()
     .setCustomId(`ecfg_minute:${userId}`)
     .setPlaceholder('⏱ Minutes')
@@ -138,18 +189,7 @@ export function buildEventSetupMessage(userId: string, cfg: PendingEventConfig):
       new StringSelectMenuOptionBuilder().setLabel('45 min').setValue('45').setDefault(cfg.selectedMinute === 45),
     );
 
-  // Durée select
-  const durationMenu = new StringSelectMenuBuilder()
-    .setCustomId(`ecfg_duration:${userId}`)
-    .setPlaceholder('⏱️ Durée de l\'événement')
-    .addOptions(
-      new StringSelectMenuOptionBuilder().setLabel('30 minutes').setValue('0.5').setEmoji('⏱️').setDefault(cfg.duration === 0.5),
-      new StringSelectMenuOptionBuilder().setLabel('1 heure').setValue('1').setEmoji('⏱️').setDefault(cfg.duration === 1),
-      new StringSelectMenuOptionBuilder().setLabel('2 heures').setValue('2').setEmoji('⏱️').setDefault(cfg.duration === 2),
-      new StringSelectMenuOptionBuilder().setLabel('3 heures').setValue('3').setEmoji('⏱️').setDefault(cfg.duration === 3),
-      new StringSelectMenuOptionBuilder().setLabel('6 heures').setValue('6').setEmoji('⏱️').setDefault(cfg.duration === 6),
-    );
-
+  // ── Boutons action ───────────────────────────────────────────────────────
   const infoBtn = new ButtonBuilder()
     .setCustomId(`ecfg_info:${userId}`)
     .setLabel('📝 Informations')
@@ -169,10 +209,10 @@ export function buildEventSetupMessage(userId: string, cfg: PendingEventConfig):
   return {
     embeds: [embed],
     components: [
-      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(dateMenu),
+      row1,
+      row2,
       new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(hourMenu),
       new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(minuteMenu),
-      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(durationMenu),
       new ActionRowBuilder<ButtonBuilder>().addComponents(infoBtn, createBtn, cancelBtn),
     ],
   };
