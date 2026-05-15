@@ -1,7 +1,7 @@
 import { Client, ActivityType } from 'discord.js';
 import { BotEvent } from '../../types';
 import { logger } from '../../utils/logger';
-import { startEventReminders } from '../modules/events/reminder';
+import { startEventReminders, startEventAutoStart } from '../modules/events/reminder';
 import { startSanctionExpiry } from '../modules/moderation/sanctionExpiry';
 
 const event: BotEvent = {
@@ -20,6 +20,7 @@ const event: BotEvent = {
 
     // Démarrage des tâches planifiées
     startEventReminders(client);
+    startEventAutoStart(client);
     startSanctionExpiry(client);
 
     logger.info('🚀 Bot prêt !');

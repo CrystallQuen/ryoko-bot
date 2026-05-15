@@ -132,6 +132,7 @@ model Event {
   scheduledAt    DateTime
   roleId         String?
   reminded       Boolean  @default(false)
+  started        Boolean  @default(false)
   discordEventId String?
   createdBy      String
   createdAt      DateTime @default(now())

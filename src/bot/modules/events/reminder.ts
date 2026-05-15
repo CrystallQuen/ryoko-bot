@@ -1,4 +1,4 @@
-import { Client, EmbedBuilder, TextChannel } from 'discord.js';
+import { Client, EmbedBuilder, TextChannel, GuildScheduledEventStatus } from 'discord.js';
 import cron from 'node-cron';
 import { prisma } from '../../../database';
 import { logger } from '../../../utils/logger';
@@ -62,4 +62,44 @@ export function startEventReminders(client: Client): void {
   });
 
   logger.info('⏰ Planificateur de rappels événements démarré');
+}
+
+export function startEventAutoStart(client: Client): void {
+  cron.schedule('* * * * *', async () => {
+    try {
+      const now = new Date();
+
+      const dueEvents = await prisma.event.findMany({
+        where: {
+          scheduledAt: { lte: now },
+          started: false,
+          discordEventId: { not: null },
+        },
+      });
+
+      for (const event of dueEvents) {
+        try {
+          const guild = client.guilds.cache.get(event.guildId);
+          if (!guild) continue;
+
+          const discordEvent = await guild.scheduledEvents.fetch(event.discordEventId!).catch(() => null);
+          if (discordEvent && discordEvent.status === GuildScheduledEventStatus.Scheduled) {
+            await discordEvent.setStatus(GuildScheduledEventStatus.Active);
+            logger.info('Événement Discord démarré automatiquement', { eventId: event.id, title: event.title });
+          }
+
+          await prisma.event.update({
+            where: { id: event.id },
+            data: { started: true },
+          });
+        } catch (error) {
+          logger.error('Erreur auto-démarrage événement', { error, eventId: event.id });
+        }
+      }
+    } catch (error) {
+      logger.error('Erreur cron auto-démarrage événements', { error });
+    }
+  });
+
+  logger.info('▶️ Planificateur d\'auto-démarrage événements démarré');
 }
