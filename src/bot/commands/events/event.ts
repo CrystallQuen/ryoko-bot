@@ -1,7 +1,6 @@
 import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
-  PermissionFlagsBits,
   GuildMember,
   EmbedBuilder,
   ModalBuilder,
@@ -20,7 +19,7 @@ const command: SlashCommand = {
   data: new SlashCommandBuilder()
     .setName('event')
     .setDescription('Gérer les animations et événements')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageEvents)
+
     .addSubcommand((sub) =>
       sub
         .setName('creer')
