@@ -1,15 +1,19 @@
-﻿import {
+import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   PermissionFlagsBits,
   GuildMember,
   EmbedBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  ChannelType,
 } from 'discord.js';
 import { SlashCommand } from '../../../types';
 import { prisma, getOrCreateGuild } from '../../../database';
 import { isModerator } from '../../../utils/permissions';
 import { successEmbed, errorEmbed, infoEmbed } from '../../../utils/embed';
-import { getEventConfig, buildEventSetupMessage, clearEventConfig } from '../../modules/events/eventConfig';
 import { logger } from '../../../utils/logger';
 
 const command: SlashCommand = {
@@ -19,31 +23,103 @@ const command: SlashCommand = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageEvents)
     .addSubcommand((sub) =>
       sub
+        .setName('creer')
+        .setDescription('Créer un événement Discord')
+        .addChannelOption((o) =>
+          o
+            .setName('salon_vocal')
+            .setDescription('Salon vocal où se déroulera l\'événement (optionnel)')
+            .addChannelTypes(ChannelType.GuildVoice, ChannelType.GuildStageVoice)
+            .setRequired(false)
+        )
+        .addChannelOption((o) =>
+          o
+            .setName('salon')
+            .setDescription('Salon d\'annonce (défaut : salon actuel)')
+            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
+            .setRequired(false)
+        )
+        .addRoleOption((o) =>
+          o.setName('role').setDescription('Rôle à mentionner').setRequired(false)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
         .setName('delete')
-        .setDescription('Supprimer une animation')
+        .setDescription('Supprimer un événement')
         .addStringOption((o) => o.setName('id').setDescription("ID de l'événement").setRequired(true))
     )
-    .addSubcommand((sub) => sub.setName('list').setDescription('Lister les animations à venir'))
-    .addSubcommand((sub) =>
-      sub.setName('creer').setDescription('Créer un événement via le panneau de configuration')
-    ),
+    .addSubcommand((sub) => sub.setName('list').setDescription('Lister les animations à venir')),
 
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    await interaction.deferReply({ flags: 'Ephemeral' });
-
     const guild = interaction.guild!;
     const moderator = interaction.member as GuildMember;
     const sub = interaction.options.getSubcommand();
 
+    if (!isModerator(moderator)) {
+      await interaction.reply({
+        embeds: [errorEmbed('Permission refusée', 'Vous devez être modérateur.')],
+        flags: 'Ephemeral',
+      });
+      return;
+    }
+
+    // ── creer : ouvre le modal Discord directement ───────────────────────────
+    if (sub === 'creer') {
+      const voiceChannelId = interaction.options.getChannel('salon_vocal')?.id ?? 'none';
+      const announceChannelId = interaction.options.getChannel('salon')?.id ?? interaction.channelId;
+      const roleId = interaction.options.getRole('role')?.id ?? 'none';
+
+      const modal = new ModalBuilder()
+        .setCustomId(`event_create:${guild.id}:${announceChannelId}:${voiceChannelId}:${roleId}`)
+        .setTitle('🗓️ Créer un événement');
+
+      const titreInput = new TextInputBuilder()
+        .setCustomId('titre')
+        .setLabel('Titre de l\'événement')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ex : Soirée karaoké, Tournoi Among Us...')
+        .setRequired(true)
+        .setMaxLength(100);
+
+      const dateInput = new TextInputBuilder()
+        .setCustomId('date')
+        .setLabel('Date de début (JJ/MM/AAAA)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ex : 25/12/2026')
+        .setRequired(true);
+
+      const heureInput = new TextInputBuilder()
+        .setCustomId('heure')
+        .setLabel('Heure de début (HH:MM)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('Ex : 20:00')
+        .setRequired(true);
+
+      const descInput = new TextInputBuilder()
+        .setCustomId('description')
+        .setLabel('Description (optionnelle)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('Décrivez l\'événement...')
+        .setRequired(false)
+        .setMaxLength(500);
+
+      modal.addComponents(
+        new ActionRowBuilder<TextInputBuilder>().addComponents(titreInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(dateInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(heureInput),
+        new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
+      );
+
+      await interaction.showModal(modal);
+      return;
+    }
+
+    // ── subcommandes avec defer ──────────────────────────────────────────────
+    await interaction.deferReply({ flags: 'Ephemeral' });
+
     try {
       await getOrCreateGuild(guild.id, guild.name);
-
-      if (!isModerator(moderator)) {
-        await interaction.editReply({
-          embeds: [errorEmbed('Permission refusée', 'Vous devez être modérateur.')],
-        });
-        return;
-      }
 
       const guildData = await prisma.guild.findUnique({ where: { id: guild.id } });
 
@@ -52,16 +128,6 @@ const command: SlashCommand = {
         const logChannel = guild.channels.cache.get(guildData.modLogChannelId);
         if (logChannel?.isTextBased()) await logChannel.send({ embeds: [embed] }).catch(() => null);
       };
-
-      if (sub === 'creer') {
-        const userId = interaction.user.id;
-        clearEventConfig(userId);
-        const cfg = getEventConfig(userId);
-        const setup = buildEventSetupMessage(userId, cfg);
-        await interaction.editReply({ ...setup } as never);
-        setTimeout(() => clearEventConfig(userId), 10 * 60 * 1000);
-        return;
-      }
 
       if (sub === 'delete') {
         const id = interaction.options.getString('id', true);
@@ -110,20 +176,13 @@ const command: SlashCommand = {
           return `• **${e.title}** — <t:${Math.floor(e.scheduledAt.getTime() / 1000)}:F>${voicePart}\n  ID: \`${e.id}\``;
         });
 
-        const embed = infoEmbed('📅 Animations à venir', lines.join('\n\n'));
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [infoEmbed('📅 Animations à venir', lines.join('\n\n'))] });
       }
     } catch (error) {
       logger.error('Erreur commande /event', { error, sub });
-      const isDeferred = interaction.deferred || interaction.replied;
-      const errorReply = {
-        embeds: [errorEmbed('Erreur', 'Une erreur est survenue. Vérifiez les logs du bot.')],
-      };
-      if (isDeferred) {
-        await interaction.editReply(errorReply).catch(() => null);
-      } else {
-        await interaction.reply({ ...errorReply, flags: 'Ephemeral' }).catch(() => null);
-      }
+      await interaction.editReply({
+        embeds: [errorEmbed('Erreur', 'Une erreur est survenue.')],
+      }).catch(() => null);
     }
   },
 };
