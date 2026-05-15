@@ -7,6 +7,7 @@ import {
   StringSelectMenuOptionBuilder,
   ButtonStyle,
   Message,
+  ComponentType,
 } from 'discord.js';
 import type { KanjiEntry, JlptLevel } from './data';
 import { getKanjiByLevel, pickRandom } from './data';
@@ -238,27 +239,38 @@ export async function nextQuestion(
 
   session.question = question;
   session.answered = false;
+  const q = question; // narrowed, non-null
 
   const embed = buildQuestionEmbed(session, question);
-  const msg = await channel.send({ embeds: [embed] });
+  const skipBtn = new ButtonBuilder()
+    .setCustomId(`kquiz_skip:${session.channelId}`)
+    .setLabel('🏳️ Je ne sais pas / Je passe')
+    .setStyle(ButtonStyle.Secondary);
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(skipBtn);
+
+  const msg = await channel.send({ embeds: [embed], components: [row] });
   session.questionMessage = msg;
 
-  // Pas de timer si illimité
-  if (session.timeoutMs === null) return;
-
-  if (session.timer) clearTimeout(session.timer);
-  session.timer = setTimeout(async () => {
+  async function revealAndNext(skippedBy?: string) {
     if (!session.active || session.answered) return;
     session.answered = true;
+    if (session.timer) { clearTimeout(session.timer); session.timer = null; }
 
-    const correctList = [...new Set([...question.entry.readings, ...question.entry.meanings])].join(', ');
+    // Désactiver le bouton sur le message de question
+    msg.edit({ components: [] }).catch(() => null);
+
+    const correctList = [...new Set([...q.entry.readings, ...q.entry.meanings])].join(', ');
+    const desc = skippedBy
+      ? `<@${skippedBy}> a passé cette question.\n\n**Réponses acceptées :** ${correctList}`
+      : `**Réponses acceptées :** ${correctList}`;
+
     await channel
       .send({
         embeds: [
           new EmbedBuilder()
             .setColor('#6c757d')
-            .setTitle(`La réponse était : ${question.entry.kanji}`)
-            .setDescription(`**Réponses acceptées :** ${correctList}`),
+            .setTitle(`La réponse était : ${q.entry.kanji}`)
+            .setDescription(desc),
         ],
       })
       .catch(() => null);
@@ -266,5 +278,24 @@ export async function nextQuestion(
     await new Promise((r) => setTimeout(r, BETWEEN_QUESTION_MS));
     if (!session.active) return;
     await nextQuestion(session, channel, onEnd);
-  }, session.timeoutMs);
+  }
+
+  // Collecteur de clics sur le bouton "Je passe"
+  const collector = msg.createMessageComponentCollector({
+    componentType: ComponentType.Button,
+    filter: (i) => i.customId === `kquiz_skip:${session.channelId}`,
+    time: (session.timeoutMs ?? 0) + BETWEEN_QUESTION_MS + 5_000,
+    max: 1,
+  });
+
+  collector.on('collect', async (btnInteraction) => {
+    await btnInteraction.deferUpdate().catch(() => null);
+    await revealAndNext(btnInteraction.user.id);
+  });
+
+  // Pas de timer si illimité
+  if (session.timeoutMs === null) return;
+
+  if (session.timer) clearTimeout(session.timer);
+  session.timer = setTimeout(() => revealAndNext(), session.timeoutMs);
 }

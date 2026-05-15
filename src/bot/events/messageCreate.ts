@@ -26,6 +26,7 @@ const event: BotEvent = {
       if (isCorrect) {
         session.answered = true;
         if (session.timer) clearTimeout(session.timer);
+        session.questionMessage?.edit({ components: [] }).catch(() => null);
 
         session.scores[message.author.id] = (session.scores[message.author.id] ?? 0) + 1;
         const pts = session.scores[message.author.id];
