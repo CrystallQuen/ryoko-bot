@@ -12,7 +12,7 @@ import {
 } from 'discord.js';
 import { SlashCommand } from '../../../types';
 import { prisma, getOrCreateGuild } from '../../../database';
-import { isModerator } from '../../../utils/permissions';
+import { canManageEvents } from '../../../utils/permissions';
 import { successEmbed, errorEmbed, infoEmbed } from '../../../utils/embed';
 import { logger } from '../../../utils/logger';
 
@@ -56,7 +56,7 @@ const command: SlashCommand = {
     const moderator = interaction.member as GuildMember;
     const sub = interaction.options.getSubcommand();
 
-    if (!isModerator(moderator)) {
+    if (!canManageEvents(moderator)) {
       await interaction.reply({
         embeds: [errorEmbed('Permission refusée', 'Vous devez être modérateur.')],
         flags: 'Ephemeral',

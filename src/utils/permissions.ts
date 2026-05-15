@@ -1,5 +1,7 @@
 import { GuildMember, PermissionFlagsBits, PermissionsBitField } from 'discord.js';
 
+export const ANIMATEUR_ROLE_ID = '1394395210049523862';
+
 export function isModerator(member: GuildMember): boolean {
   return (
     member.permissions.has(PermissionFlagsBits.ModerateMembers) ||
@@ -7,6 +9,10 @@ export function isModerator(member: GuildMember): boolean {
     member.permissions.has(PermissionFlagsBits.KickMembers) ||
     member.permissions.has(PermissionFlagsBits.Administrator)
   );
+}
+
+export function canManageEvents(member: GuildMember): boolean {
+  return isModerator(member) || member.roles.cache.has(ANIMATEUR_ROLE_ID);
 }
 
 export function isAdmin(member: GuildMember): boolean {
