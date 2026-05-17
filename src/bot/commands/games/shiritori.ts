@@ -8,7 +8,7 @@ import { SlashCommand } from '../../../types';
 import { prisma, getOrCreateGuild } from '../../../database';
 import { errorEmbed, gameEmbed } from '../../../utils/embed';
 import {
-  isValidWord,
+  isValidWordAsync,
   findWordStartingWith,
   getLastChar,
   endsWithN,
@@ -196,7 +196,7 @@ const command: SlashCommand = {
         return;
       }
 
-      if (!isValidWord(word)) {
+      if (!(await isValidWordAsync(word))) {
         await interaction.editReply({
           embeds: [
             errorEmbed('Mot inconnu', `**${word}** n'est pas dans le dictionnaire. Essayez un autre mot !`),
