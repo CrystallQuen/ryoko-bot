@@ -17,21 +17,20 @@ const event: BotEvent = {
         member.guild.roles.cache.get(MEMBRE_ROLE_ID) ??
         await member.guild.roles.fetch(MEMBRE_ROLE_ID).catch(() => null);
 
+      // L'upsert DOIT être fait avant roles.add :
+      // l'ajout du rôle déclenche guildMemberUpdate qui cherche la ligne en DB.
+      await prisma.userLevel.upsert({
+        where: { guildId_userId: { guildId: member.guild.id, userId: member.id } },
+        update: {},
+        create: { guildId: member.guild.id, userId: member.id },
+      });
+
       if (membreRole) {
         await member.roles.add(membreRole, 'Attribution automatique à l\'arrivée');
         logger.info('Rôle Membre attribué', { guildId: member.guild.id, userId: member.id });
       } else {
         logger.warn('Rôle Membre introuvable', { guildId: member.guild.id, roleId: MEMBRE_ROLE_ID });
       }
-
-      // Crée l'entrée si elle n'existe pas — NE PAS reset welcomeSentAt ici
-      // (le reset est géré par guildMemberRemove pour éviter la course critique
-      //  entre les deux instances Railway)
-      await prisma.userLevel.upsert({
-        where: { guildId_userId: { guildId: member.guild.id, userId: member.id } },
-        update: {},
-        create: { guildId: member.guild.id, userId: member.id },
-      });
     } catch (error) {
       logger.error('Erreur événement guildMemberAdd', { error });
     }
