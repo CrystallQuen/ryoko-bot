@@ -5,6 +5,12 @@ import { logger } from '../../utils/logger';
 import { generateWelcomeCard } from '../modules/welcome/welcomeCard';
 
 const MEMBRE_ROLE_ID = '1394696937713831997';
+const AUTO_ROLE_IDS = [
+  '1507746147899281428',
+  '1454565598469030084',
+  '1454565562373115914',
+  '1507746242455802008',
+];
 
 const event: BotEvent = {
   name: 'guildMemberAdd',
@@ -29,6 +35,18 @@ const event: BotEvent = {
         logger.info('Rôle Membre attribué', { guildId: member.guild.id, userId: member.id });
       } else {
         logger.warn('Rôle Membre introuvable', { guildId: member.guild.id, roleId: MEMBRE_ROLE_ID });
+      }
+
+      // Attribution automatique des rôles supplémentaires
+      for (const roleId of AUTO_ROLE_IDS) {
+        const role =
+          member.guild.roles.cache.get(roleId) ??
+          await member.guild.roles.fetch(roleId).catch(() => null);
+        if (role) {
+          await member.roles.add(role, 'Attribution automatique à l\'arrivée').catch(() => null);
+        } else {
+          logger.warn('Rôle auto introuvable', { guildId: member.guild.id, roleId });
+        }
       }
 
       // ── Message de bienvenue ─────────────────────────────────────────────
