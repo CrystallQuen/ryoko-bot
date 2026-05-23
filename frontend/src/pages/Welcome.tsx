@@ -16,6 +16,7 @@ interface WelcomeConfig {
 }
 
 const DEFAULT_COLOR = '#f25858';
+const DEFAULT_BG_URL = 'https://media.discordapp.net/attachments/1139379948130410608/1503141993507717241/Design_sans_titre_2.png?ex=6a12c052&is=6a116ed2&hm=211ea909237c80f2bb0d6bd5e885391b8397ba38973026559a11258f579d2dc5&=&format=webp&quality=lossless&width=1200&height=675';
 
 export default function Welcome() {
   const { guildId } = useParams<{ guildId: string }>();
@@ -40,7 +41,7 @@ export default function Welcome() {
       api.get<Channel[]>(`/guilds/${guildId}/channels`),
     ])
       .then(([welcomeRes, channelsRes]) => {
-        setConfig(welcomeRes.data);
+        setConfig({ ...welcomeRes.data, welcomeImageUrl: welcomeRes.data.welcomeImageUrl ?? DEFAULT_BG_URL });
         setChannels(channelsRes.data.filter((c) => c.type === 0));
       })
       .catch(() => toast.error('Erreur de chargement'))

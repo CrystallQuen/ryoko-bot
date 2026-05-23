@@ -5,6 +5,7 @@ import { logger } from '../../utils/logger';
 import { generateWelcomeCard } from '../modules/welcome/welcomeCard';
 
 const MEMBRE_ROLE_ID = '1394696937713831997';
+const DEFAULT_WELCOME_BG = 'https://media.discordapp.net/attachments/1139379948130410608/1503141993507717241/Design_sans_titre_2.png?ex=6a12c052&is=6a116ed2&hm=211ea909237c80f2bb0d6bd5e885391b8397ba38973026559a11258f579d2dc5&=&format=webp&quality=lossless&width=1200&height=675';
 const AUTO_ROLE_IDS = [
   '1507746147899281428',
   '1454565598469030084',
@@ -78,7 +79,7 @@ const event: BotEvent = {
           avatarUrl: member.user.displayAvatarURL({ extension: 'png' }),
           guildName: member.guild.name,
           memberCount,
-          backgroundUrl: guildData.welcomeImageUrl ?? null,
+          backgroundUrl: guildData.welcomeImageUrl ?? DEFAULT_WELCOME_BG,
           accentColor,
         });
         cardAttachment = new AttachmentBuilder(cardBuffer, { name: 'welcome.png' });
